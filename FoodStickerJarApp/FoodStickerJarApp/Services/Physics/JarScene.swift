@@ -34,7 +34,7 @@ class JarScene: SKScene, SKPhysicsContactDelegate {
             motionManager.startDeviceMotionUpdates(to: .main) { [weak self] (data, error) in
                 guard let self = self, let data = data else { return }
                 let gravity = data.gravity
-                self.physicsWorld.gravity = CGVector(dx: gravity.x * 15, dy: gravity.y * 15)
+                self.physicsWorld.gravity = CGVector(dx: gravity.x * 12, dy: gravity.y * 12)
             }
         }
     }
@@ -100,15 +100,23 @@ class JarScene: SKScene, SKPhysicsContactDelegate {
         // Use the UUID as the node's name for identification on tap.
         node.name = id.uuidString
         
-        // Resize the sticker to a consistent size.
-        let stickerSize: CGFloat = 80.0
-        node.size = CGSize(width: stickerSize, height: stickerSize)
+        // Resize the sticker to a consistent *maximum* dimension, preserving its aspect ratio.
+        let maxStickerDimension: CGFloat = 80.0
+        let aspectRatio = image.size.width / image.size.height
+        var stickerSize: CGSize
+        if aspectRatio > 1 { // Wider than tall
+            stickerSize = CGSize(width: maxStickerDimension, height: maxStickerDimension / aspectRatio)
+        } else { // Taller than wide, or square
+            stickerSize = CGSize(width: maxStickerDimension * aspectRatio, height: maxStickerDimension)
+        }
+        node.size = stickerSize
         
-        // Create a more accurate physics body from the texture's shape.
+        // Create a more accurate physics body from the texture's shape, using the corrected size.
         node.physicsBody = SKPhysicsBody(texture: texture, size: node.size)
         node.physicsBody?.categoryBitMask = PhysicsCategory.sticker
         node.physicsBody?.collisionBitMask = PhysicsCategory.sticker | PhysicsCategory.wall
         node.physicsBody?.contactTestBitMask = PhysicsCategory.wall
+        node.physicsBody?.usesPreciseCollisionDetection = true // Prevents tunneling through walls.
         
         // Adjust physics properties to be less "sticky" and more "bouncy".
         node.physicsBody?.restitution = 0.4 // Increased bounciness
@@ -122,11 +130,45 @@ class JarScene: SKScene, SKPhysicsContactDelegate {
         // Remove old walls before creating new ones.
         self.children.filter { $0.physicsBody?.categoryBitMask == PhysicsCategory.wall }.forEach { $0.removeFromParent() }
 
+        // --- FIX: Create a fully-enclosed, jar-shaped boundary ---
+        let rect = self.frame
+        
+        // Define dimensions for the custom jar shape to match the visual asset
+        let bottomRadius: CGFloat = 60.0
+        let topRadius: CGFloat = 30.0
+        let topOpeningWidthRatio: CGFloat = 0.85 // Mouth of jar is 85% of the total width
+        let topShoulderXInset = (rect.width - (rect.width * topOpeningWidthRatio)) / 2
+        
+        let path = CGMutablePath()
+        
+        // Start from the bottom-left side
+        path.move(to: CGPoint(x: rect.minX, y: rect.minY + bottomRadius))
+        
+        // Rounded bottom corners and straight bottom line
+        path.addArc(tangent1End: CGPoint(x: rect.minX, y: rect.minY), tangent2End: CGPoint(x: rect.minX + bottomRadius, y: rect.minY), radius: bottomRadius)
+        path.addLine(to: CGPoint(x: rect.maxX - bottomRadius, y: rect.minY))
+        path.addArc(tangent1End: CGPoint(x: rect.maxX, y: rect.minY), tangent2End: CGPoint(x: rect.maxX, y: rect.minY + bottomRadius), radius: bottomRadius)
+        
+        // Right wall
+        path.addLine(to: CGPoint(x: rect.maxX, y: rect.maxY - topRadius))
+        
+        // Top-right "shoulder" of the jar
+        path.addArc(tangent1End: CGPoint(x: rect.maxX, y: rect.maxY), tangent2End: CGPoint(x: rect.maxX - topShoulderXInset, y: rect.maxY), radius: topRadius)
+        
+        // Top opening
+        path.addLine(to: CGPoint(x: rect.minX + topShoulderXInset, y: rect.maxY))
+        
+        // Top-left "shoulder" of the jar
+        path.addArc(tangent1End: CGPoint(x: rect.minX, y: rect.maxY), tangent2End: CGPoint(x: rect.minX, y: rect.maxY - topRadius), radius: topRadius)
+
+        // Close the path to form a complete loop (connects back to the starting point via the left wall).
+        path.closeSubpath()
+
         let boundaryNode = SKNode()
-        // Create a physics body that follows the rectangular frame of the scene.
-        boundaryNode.physicsBody = SKPhysicsBody(edgeLoopFrom: self.frame)
+        // Use edgeLoopFrom, which is perfect for a closed container.
+        boundaryNode.physicsBody = SKPhysicsBody(edgeLoopFrom: path)
         boundaryNode.physicsBody?.categoryBitMask = PhysicsCategory.wall
-        boundaryNode.physicsBody?.friction = 0.3
+        boundaryNode.physicsBody?.friction = 0.0
         
         addChild(boundaryNode)
     }

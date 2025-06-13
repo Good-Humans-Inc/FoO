@@ -22,9 +22,15 @@ struct HomeView: View {
                     .padding(.top)
 
                 GeometryReader { geo in
-                    let jarVisualWidth: CGFloat = geo.size.width * 0.9
+                    // Make the jar visual fill the width of the screen for a larger appearance.
+                    let jarVisualWidth: CGFloat = geo.size.width
                     let jarVisualHeight: CGFloat = jarVisualWidth * 1.35
-                    let spriteViewSize = CGSize(width: jarVisualWidth * 0.8, height: jarVisualHeight * 0.75)
+                    
+                    // Adjust the physics world to fit snugly inside the new, larger jar image.
+                    // These values are fine-tuned to align with the transparent interior of the asset.
+                    let spriteViewWidth = jarVisualWidth * 0.78
+                    let spriteViewHeight = jarVisualHeight * 0.72
+                    let spriteViewSize = CGSize(width: spriteViewWidth, height: spriteViewHeight)
 
                     // This ZStack is now directly inside the GeometryReader.
                     // It will center itself, and its size is determined by its content,
@@ -37,7 +43,7 @@ struct HomeView: View {
 
                         SpriteView(scene: viewModel.jarScene)
                             .frame(width: spriteViewSize.width, height: spriteViewSize.height)
-                            .offset(y: 15)
+                            .offset(y: 15) // A slight vertical offset for perfect alignment.
                     }
                     // Place the frame modifier on the ZStack to center it.
                     .frame(width: geo.size.width, height: geo.size.height)
