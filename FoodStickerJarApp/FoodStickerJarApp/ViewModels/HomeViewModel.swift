@@ -20,6 +20,10 @@ class HomeViewModel: ObservableObject {
     // before it's added to the main jar.
     @Published var newSticker: FoodItem?
     
+    // A private copy to hold the fully-analyzed sticker, avoiding a race condition
+    // when the view is dismissed.
+    private var stickerToCommit: FoodItem?
+    
     // MARK: - Services and Engine
     
     // A single, persistent instance of the physics scene. This is crucial
@@ -76,25 +80,29 @@ class HomeViewModel: ObservableObject {
     }
     
     /// Commits the temporarily held new sticker to the main collection,
-    /// saves it, and adds it to the physics scene.
+    /// saves it, and adds it to the physics scene. This function is called
+    /// by the view when the detail sheet is dismissed.
     func commitNewSticker() {
-        // We can safely unwrap, because this is only called when newSticker is non-nil.
-        guard let itemToAdd = newSticker else { return }
+        // Use the private, safe-guarded copy of the sticker.
+        guard let itemToAdd = stickerToCommit else { return }
         
-        // Add the new sticker to our main array.
+        // 1. Add the sticker to the main data array.
         foodItems.append(itemToAdd)
         
-        // Save the updated array to disk.
+        // 2. Save the updated array.
         persistenceService.save(items: foodItems)
         
-        // Add a visual representation to the physics scene.
+        // 3. Add the sticker to the physics scene, triggering the animation.
         jarScene.addSticker(item: itemToAdd)
+        
+        // 4. Clear the temporary item.
+        stickerToCommit = nil
     }
     
     // MARK: - Private Methods
     
     /// Triggers the background analysis of a food item.
-    /// When complete, it updates the item and saves the collection.
+    /// When complete, it only updates the temporary `newSticker` property.
     private func analyzeFoodItem(_ item: FoodItem) {
         guard let image = item.image else { return }
         
@@ -115,10 +123,11 @@ class HomeViewModel: ObservableObject {
                     print("Food analysis failed for item \(item.id): \(error)")
                 }
 
-                // If this was the new sticker, update the binding.
-                // The main array will be updated when the user dismisses the sheet.
+                // If this was the new sticker, update the temporary properties.
                 if self.newSticker?.id == updatedItem.id {
                     self.newSticker = updatedItem
+                    // Keep a private copy of the fully-updated item.
+                    self.stickerToCommit = updatedItem
                 }
             }
         }
