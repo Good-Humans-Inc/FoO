@@ -2,7 +2,7 @@ import functions_framework
 import vertexai
 import base64
 import json
-from vertexai.preview.generative_models import GenerativeModel, Part
+from vertexai.generative_models import GenerativeModel, Part
 
 # --- CONFIGURATION ---
 PROJECT_ID = "foodjar-462805" 
