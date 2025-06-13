@@ -67,6 +67,11 @@ class FoodAnalysisService {
                 return
             }
             
+            // --- ADDED: Log the raw JSON response for debugging ---
+            if let jsonString = String(data: data, encoding: .utf8) {
+                print("Received JSON response:\n\(jsonString)")
+            }
+            
             // Decode the JSON response into our FoodInfo struct.
             do {
                 let foodInfo = try JSONDecoder().decode(FoodInfo.self, from: data)

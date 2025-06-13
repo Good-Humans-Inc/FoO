@@ -85,6 +85,7 @@ struct HomeView: View {
         // Full screen cover for showing the sticker detail.
         .fullScreenCover(item: $viewModel.selectedFoodItem) { item in
             FoodDetailView(foodItem: item)
+                .id(item.hashValue)
         }
     }
 }

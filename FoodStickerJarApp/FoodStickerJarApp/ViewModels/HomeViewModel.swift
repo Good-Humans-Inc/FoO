@@ -90,6 +90,11 @@ class HomeViewModel: ObservableObject {
                         self.foodItems[index].funFact = foodInfo.funFact
                         self.foodItems[index].nutrition = foodInfo.nutrition
                         
+                        // This ensures the detail view gets the new data and refreshes its UI.
+                        if self.selectedFoodItem?.id == self.foodItems[index].id {
+                            self.selectedFoodItem = self.foodItems[index]
+                        }
+                        
                         // Re-save the updated data.
                         self.persistenceService.save(items: self.foodItems)
                         print("Successfully analyzed and updated item: \(foodInfo.name)")
