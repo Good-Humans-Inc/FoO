@@ -5,12 +5,13 @@ import json
 from vertexai.preview.generative_models import GenerativeModel, Part
 
 # --- CONFIGURATION ---
-# IMPORTANT: Replace with your GCP Project ID
 PROJECT_ID = "foodjar-462805" 
 LOCATION = "us-central1"
 
-# Initialize Vertex AI
-vertexai.init(project=PROJECT_ID, location=LOCATION)
+# --- REMOVED GLOBAL INITIALIZATION ---
+# The vertexai.init() call is now inside the function handler.
+# This prevents the container from crashing on startup if the API is not enabled
+# or if permissions are incorrect.
 
 @functions_framework.http
 def analyze_food(request):
@@ -18,6 +19,13 @@ def analyze_food(request):
     HTTP Cloud Function to analyze a food image using Gemini Pro Vision.
     Expects a JSON payload with a "image_data" key containing a base64-encoded image.
     """
+    # --- FIX: Initialize Vertex AI on first request ---
+    try:
+        vertexai.init(project=PROJECT_ID, location=LOCATION)
+    except Exception as e:
+        # If initialization fails, it's likely a config/permissions issue.
+        return (json.dumps({"error": f"Vertex AI initialization failed: {e}"}), 500, {'Access-Control-Allow-Origin': '*'})
+
     # Set CORS headers to allow requests from any origin.
     # This is necessary for your Swift app to call this function.
     if request.method == 'OPTIONS':

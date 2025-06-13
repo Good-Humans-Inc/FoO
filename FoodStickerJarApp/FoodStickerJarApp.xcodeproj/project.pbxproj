@@ -11,10 +11,10 @@
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
-		2C3C4BF32DFBEF5D005E2C14 /* Exceptions for "FoodStickerJarApp" folder in "FoodStickerJarApp" target */ = {
+		2C3C4C312DFBF861005E2C14 /* Exceptions for "FoodStickerJarApp" folder in "FoodStickerJarApp" target */ = {
 			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
 			membershipExceptions = (
-				Info.plist,
+				Views/Detail/FoodDetailView.swift,
 			);
 			target = 2C3C4B922DFB72F5005E2C14 /* FoodStickerJarApp */;
 		};
@@ -24,7 +24,7 @@
 		2C3C4B952DFB72F5005E2C14 /* FoodStickerJarApp */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
 			exceptions = (
-				2C3C4BF32DFBEF5D005E2C14 /* Exceptions for "FoodStickerJarApp" folder in "FoodStickerJarApp" target */,
+				2C3C4C312DFBF861005E2C14 /* Exceptions for "FoodStickerJarApp" folder in "FoodStickerJarApp" target */,
 			);
 			path = FoodStickerJarApp;
 			sourceTree = "<group>";
@@ -275,7 +275,7 @@
 				DEVELOPMENT_TEAM = 2MLHSW6S86;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
-				INFOPLIST_FILE = FoodStickerJarApp/Info.plist;
+				INFOPLIST_FILE = "";
 				INFOPLIST_KEY_NSCameraUsageDescription = "Use your camera to save the food!";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
@@ -308,7 +308,7 @@
 				DEVELOPMENT_TEAM = 2MLHSW6S86;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
-				INFOPLIST_FILE = FoodStickerJarApp/Info.plist;
+				INFOPLIST_FILE = "";
 				INFOPLIST_KEY_NSCameraUsageDescription = "Use your camera to save the food!";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
