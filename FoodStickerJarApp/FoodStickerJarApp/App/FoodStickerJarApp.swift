@@ -2,14 +2,23 @@ import SwiftUI
 
 @main
 struct FoodStickerJarApp: App {
-    // Create a single instance of the ViewModel that will be used for the lifetime of the app.
-    @StateObject private var homeViewModel = HomeViewModel()
+    // Connect the AppDelegate to the SwiftUI app lifecycle.
+    @UIApplicationDelegateAdaptor(AppDelegate.self) var delegate
 
+    // Create a single, shared instance of the AuthenticationService.
+    @StateObject private var authService = AuthenticationService()
+    
     var body: some Scene {
         WindowGroup {
-            HomeView()
-                // Provide the ViewModel to the HomeView and its descendants.
-                .environmentObject(homeViewModel)
+            // We show a loading view until the user is authenticated.
+            if authService.user != nil {
+                // We create the HomeViewModel here, only after we know the user is signed in.
+                // This ensures that all services are initialized in the correct order.
+                HomeView()
+                    .environmentObject(HomeViewModel(authService: authService))
+            } else {
+                ProgressView()
+            }
         }
     }
 }

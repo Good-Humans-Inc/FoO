@@ -31,7 +31,7 @@ class HomeViewModel: ObservableObject {
     let jarScene = JarScene(size: .zero)
     
     // The service responsible for saving and loading data.
-    private let persistenceService = PersistenceService()
+    private var persistenceService: PersistenceService?
     // The service for analyzing food images.
     private let analysisService = FoodAnalysisService()
     
@@ -43,10 +43,29 @@ class HomeViewModel: ObservableObject {
 
     // MARK: - Initializer
     
-    init() {
+    init(authService: AuthenticationService) {
         // Scene communication needs to be set up immediately.
         // The scene itself will be populated once its size is known from the view.
         setupJarSceneCommunication()
+        
+        // Listen for the user to be authenticated.
+        authService.$user
+            .compactMap { $0?.uid } // We only care when we get a non-nil UID.
+            .first() // We only need to do this setup once.
+            .sink { [weak self] uid in
+                guard let self = self else { return }
+                
+                print("User authenticated with UID: \(uid). Initializing persistence.")
+                // Now that we have a UID, initialize the persistence service.
+                self.persistenceService = PersistenceService(uid: uid)
+                
+                // If the scene is already set up, load the items.
+                // Otherwise, the data will be loaded when setupScene is called.
+                if self.hasSceneBeenSetUp {
+                    self.loadFoodItems()
+                }
+            }
+            .store(in: &cancellables)
     }
     
     // MARK: - Public Methods
@@ -59,8 +78,12 @@ class HomeViewModel: ObservableObject {
         guard !hasSceneBeenSetUp, size != .zero else { return }
         
         jarScene.size = size
-        loadFoodItems() // Now this will populate a correctly-sized scene.
         hasSceneBeenSetUp = true
+        
+        // If the persistence service is ready, load the data now.
+        if persistenceService != nil {
+            loadFoodItems()
+        }
     }
     
     /// Creates a new `FoodItem` from an image, stores it temporarily,
@@ -72,6 +95,7 @@ class HomeViewModel: ObservableObject {
         let newItem = FoodItem(image: stickerImage)
         // Hold this new item temporarily to be shown in the sheet.
         self.newSticker = newItem
+        self.stickerToCommit = newItem // Keep an initial copy
         
         // Kick off the background analysis.
         analyzeFoodItem(newItem)
@@ -90,7 +114,7 @@ class HomeViewModel: ObservableObject {
         foodItems.append(itemToAdd)
         
         // 2. Save the updated array.
-        persistenceService.save(items: foodItems)
+        persistenceService?.save(items: foodItems)
         
         // 3. Add the sticker to the physics scene, triggering the animation.
         jarScene.addSticker(item: itemToAdd)
@@ -135,6 +159,10 @@ class HomeViewModel: ObservableObject {
     
     /// Loads the saved food items from disk and populates the scene.
     private func loadFoodItems() {
+        guard let persistenceService = persistenceService else {
+            print("Cannot load items: persistence service not available.")
+            return
+        }
         self.foodItems = persistenceService.load()
         // Pass the loaded items to the physics scene to populate the jar.
         jarScene.populateJar(with: self.foodItems)
