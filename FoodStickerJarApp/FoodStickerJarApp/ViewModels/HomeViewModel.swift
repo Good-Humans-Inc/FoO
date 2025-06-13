@@ -16,6 +16,10 @@ class HomeViewModel: ObservableObject {
     // The currently selected item for viewing in the detail view.
     @Published var selectedFoodItem: FoodItem?
     
+    // Holds the newly created sticker to be shown in the detail sheet
+    // before it's added to the main jar.
+    @Published var newSticker: FoodItem?
+    
     // MARK: - Services and Engine
     
     // A single, persistent instance of the physics scene. This is crucial
@@ -55,20 +59,40 @@ class HomeViewModel: ObservableObject {
         hasSceneBeenSetUp = true
     }
     
-    /// Adds a newly created sticker to the collection, saves it,
-    /// and instructs the physics scene to animate it.
-    /// It also kicks off the background analysis of the food.
-    /// - Parameter stickerImage: The final UIImage of the sticker (with outline).
-    func addNewSticker(stickerImage: UIImage) {
+    /// Creates a new `FoodItem` from an image, stores it temporarily,
+    /// and kicks off the background analysis.
+    /// - Parameter stickerImage: The final `UIImage` of the sticker.
+    /// - Returns: The `FoodItem` that was created.
+    @discardableResult
+    func startStickerCreation(stickerImage: UIImage) -> FoodItem {
         let newItem = FoodItem(image: stickerImage)
-        foodItems.append(newItem)
-        persistenceService.save(items: foodItems)
-        
-        // Instruct the JarScene to add the new sticker with a "falling" animation.
-        jarScene.addSticker(item: newItem)
+        // Hold this new item temporarily to be shown in the sheet.
+        self.newSticker = newItem
         
         // Kick off the background analysis.
         analyzeFoodItem(newItem)
+        
+        return newItem
+    }
+    
+    /// Commits the temporarily held new sticker to the main collection,
+    /// saves it, and adds it to the physics scene.
+    func commitNewSticker() {
+        guard var itemToAdd = newSticker else { return }
+        
+        // Ensure the item in the sheet gets the latest analysis data before being added.
+        if let index = foodItems.firstIndex(where: { $0.id == itemToAdd.id }) {
+            itemToAdd = foodItems[index]
+        } else {
+            // If it wasn't updated (e.g., analysis is slow), add it directly.
+            foodItems.append(itemToAdd)
+        }
+        
+        persistenceService.save(items: foodItems)
+        jarScene.addSticker(item: itemToAdd)
+        
+        // Clear the temporary item.
+        self.newSticker = nil
     }
     
     // MARK: - Private Methods
@@ -84,7 +108,14 @@ class HomeViewModel: ObservableObject {
             DispatchQueue.main.async {
                 switch result {
                 case .success(let foodInfo):
-                    // Find the item in our array and update it.
+                    // Update the temporary new sticker if it's the one being analyzed.
+                    if self.newSticker?.id == item.id {
+                        self.newSticker?.name = foodInfo.name
+                        self.newSticker?.funFact = foodInfo.funFact
+                        self.newSticker?.nutrition = foodInfo.nutrition
+                    }
+                    
+                    // Also update the item if it's already in the main array (for existing items).
                     if let index = self.foodItems.firstIndex(where: { $0.id == item.id }) {
                         self.foodItems[index].name = foodInfo.name
                         self.foodItems[index].funFact = foodInfo.funFact
@@ -100,6 +131,13 @@ class HomeViewModel: ObservableObject {
                         print("Successfully analyzed and updated item: \(foodInfo.name)")
                     }
                 case .failure(let error):
+                    // If analysis fails, mark it as "N/A" so the UI can respond.
+                    if self.newSticker?.id == item.id {
+                        self.newSticker?.name = "N/A"
+                    }
+                    if let index = self.foodItems.firstIndex(where: { $0.id == item.id }) {
+                        self.foodItems[index].name = "N/A"
+                    }
                     print("Food analysis failed for item \(item.id): \(error)")
                 }
             }
