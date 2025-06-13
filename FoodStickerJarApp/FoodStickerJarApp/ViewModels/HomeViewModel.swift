@@ -24,6 +24,8 @@ class HomeViewModel: ObservableObject {
     
     // The service responsible for saving and loading data.
     private let persistenceService = PersistenceService()
+    // The service for analyzing food images.
+    private let analysisService = FoodAnalysisService()
     
     // Used to receive notifications from the JarScene when a sticker is tapped.
     private var cancellables = Set<AnyCancellable>()
@@ -55,6 +57,7 @@ class HomeViewModel: ObservableObject {
     
     /// Adds a newly created sticker to the collection, saves it,
     /// and instructs the physics scene to animate it.
+    /// It also kicks off the background analysis of the food.
     /// - Parameter stickerImage: The final UIImage of the sticker (with outline).
     func addNewSticker(stickerImage: UIImage) {
         let newItem = FoodItem(image: stickerImage)
@@ -63,9 +66,40 @@ class HomeViewModel: ObservableObject {
         
         // Instruct the JarScene to add the new sticker with a "falling" animation.
         jarScene.addSticker(item: newItem)
+        
+        // Kick off the background analysis.
+        analyzeFoodItem(newItem)
     }
     
     // MARK: - Private Methods
+    
+    /// Triggers the background analysis of a food item.
+    /// When complete, it updates the item and saves the collection.
+    private func analyzeFoodItem(_ item: FoodItem) {
+        guard let image = item.image else { return }
+        
+        analysisService.analyzeFoodImage(image) { [weak self] result in
+            guard let self = self else { return }
+            
+            DispatchQueue.main.async {
+                switch result {
+                case .success(let foodInfo):
+                    // Find the item in our array and update it.
+                    if let index = self.foodItems.firstIndex(where: { $0.id == item.id }) {
+                        self.foodItems[index].name = foodInfo.name
+                        self.foodItems[index].funFact = foodInfo.funFact
+                        self.foodItems[index].nutrition = foodInfo.nutrition
+                        
+                        // Re-save the updated data.
+                        self.persistenceService.save(items: self.foodItems)
+                        print("Successfully analyzed and updated item: \(foodInfo.name)")
+                    }
+                case .failure(let error):
+                    print("Food analysis failed for item \(item.id): \(error)")
+                }
+            }
+        }
+    }
     
     /// Loads the saved food items from disk and populates the scene.
     private func loadFoodItems() {
