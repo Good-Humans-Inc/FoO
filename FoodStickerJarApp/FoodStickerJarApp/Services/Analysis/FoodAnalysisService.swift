@@ -5,7 +5,7 @@ class FoodAnalysisService {
     
     // --- CONFIGURATION ---
     // IMPORTANT: Replace this with the trigger URL for your deployed GCP Cloud Function.
-    private let cloudFunctionURLString = "YOUR_GCP_FUNCTION_URL_HERE"
+    private let cloudFunctionURLString = "https://us-central1-foodjar-462805.cloudfunctions.net/analyze_food"
     
     // Custom error type for more specific error handling.
     enum AnalysisError: Error {

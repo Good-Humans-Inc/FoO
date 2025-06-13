@@ -50,7 +50,7 @@ def analyze_food(request):
         return (json.dumps({"error": f"Invalid base64 data: {e}"}), 400, headers)
 
     # --- 2. Prepare the Prompt and Call Gemini ---
-    model = GenerativeModel("gemini-pro-vision")
+    model = GenerativeModel("gemini-2.0-flash")
     image_part = Part.from_data(data=image_content, mime_type="image/png")
     
     prompt = """
