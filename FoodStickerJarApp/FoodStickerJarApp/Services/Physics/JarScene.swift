@@ -12,6 +12,11 @@ class JarScene: SKScene, SKPhysicsContactDelegate {
     // The HomeViewModel will subscribe to this.
     let onStickerTapped = PassthroughSubject<UUID, Never>()
     
+    // Properties to handle dragging stickers
+    private var draggedNode: SKNode?
+    private var touchStartPos: CGPoint?
+    private var nodeStartPos: CGPoint?
+    
     // Constants for physics categories to identify nodes.
     private struct PhysicsCategory {
         static let sticker: UInt32 = 0x1 << 0 // Bitmask for stickers
@@ -43,14 +48,61 @@ class JarScene: SKScene, SKPhysicsContactDelegate {
         guard let touch = touches.first else { return }
         let location = touch.location(in: self)
         
-        // Find the node at the touch location.
-        if let tappedNode = nodes(at: location).first(where: { $0.name != nil }),
-           let nodeName = tappedNode.name,
-           let itemID = UUID(uuidString: nodeName) {
-            
-            // Send the UUID of the tapped sticker through the publisher.
-            onStickerTapped.send(itemID)
+        // Find a sticker node at the touch location.
+        if let node = self.nodes(at: location).first(where: { $0.physicsBody?.categoryBitMask == PhysicsCategory.sticker }) {
+            // Start tracking the node for a potential drag or tap.
+            draggedNode = node
+            touchStartPos = location
+            nodeStartPos = node.position
+            // Temporarily disable physics simulation for the dragged node.
+            node.physicsBody?.isDynamic = false
         }
+    }
+    
+    override func touchesMoved(_ touches: Set<UITouch>, with event: UIEvent?) {
+        guard let touch = touches.first, let draggedNode = self.draggedNode, let touchStartPos = self.touchStartPos, let nodeStartPos = self.nodeStartPos else { return }
+        
+        // Calculate the new position based on the drag distance.
+        let location = touch.location(in: self)
+        let dx = location.x - touchStartPos.x
+        let dy = location.y - touchStartPos.y
+        draggedNode.position = CGPoint(x: nodeStartPos.x + dx, y: nodeStartPos.y + dy)
+    }
+    
+    override func touchesEnded(_ touches: Set<UITouch>, with event: UIEvent?) {
+        guard let touch = touches.first, let draggedNode = self.draggedNode, let touchStartPos = self.touchStartPos else {
+            // If nothing was being dragged, do nothing.
+            cleanupDrag()
+            return
+        }
+
+        // Determine if the action was a tap or a drag.
+        let location = touch.location(in: self)
+        let distance = hypot(location.x - touchStartPos.x, location.y - touchStartPos.y)
+        
+        if distance < 15 { // Treat as a tap if movement was minimal.
+            if let nodeName = draggedNode.name, let itemID = UUID(uuidString: nodeName) {
+                onStickerTapped.send(itemID)
+            }
+        }
+        
+        // Re-enable physics and clean up.
+        cleanupDrag()
+    }
+    
+    override func touchesCancelled(_ touches: Set<UITouch>, with event: UIEvent?) {
+        cleanupDrag()
+    }
+    
+    private func cleanupDrag() {
+        if let draggedNode = self.draggedNode {
+            // Re-enable physics simulation for the node.
+            draggedNode.physicsBody?.isDynamic = true
+        }
+        // Reset tracking properties.
+        self.draggedNode = nil
+        self.touchStartPos = nil
+        self.nodeStartPos = nil
     }
     
     // This is called automatically when the view's size changes.
