@@ -78,21 +78,17 @@ class HomeViewModel: ObservableObject {
     /// Commits the temporarily held new sticker to the main collection,
     /// saves it, and adds it to the physics scene.
     func commitNewSticker() {
-        guard var itemToAdd = newSticker else { return }
+        // We can safely unwrap, because this is only called when newSticker is non-nil.
+        guard let itemToAdd = newSticker else { return }
         
-        // Ensure the item in the sheet gets the latest analysis data before being added.
-        if let index = foodItems.firstIndex(where: { $0.id == itemToAdd.id }) {
-            itemToAdd = foodItems[index]
-        } else {
-            // If it wasn't updated (e.g., analysis is slow), add it directly.
-            foodItems.append(itemToAdd)
-        }
+        // Add the new sticker to our main array.
+        foodItems.append(itemToAdd)
         
+        // Save the updated array to disk.
         persistenceService.save(items: foodItems)
-        jarScene.addSticker(item: itemToAdd)
         
-        // Clear the temporary item.
-        // self.newSticker = nil // This will be handled by the view now.
+        // Add a visual representation to the physics scene.
+        jarScene.addSticker(item: itemToAdd)
     }
     
     // MARK: - Private Methods
@@ -106,39 +102,23 @@ class HomeViewModel: ObservableObject {
             guard let self = self else { return }
             
             DispatchQueue.main.async {
+                var updatedItem = item
+                
                 switch result {
                 case .success(let foodInfo):
-                    // Update the temporary new sticker if it's the one being analyzed.
-                    if self.newSticker?.id == item.id {
-                        self.newSticker?.name = foodInfo.name
-                        self.newSticker?.funFact = foodInfo.funFact
-                        self.newSticker?.nutrition = foodInfo.nutrition
-                    }
+                    updatedItem.name = foodInfo.name
+                    updatedItem.funFact = foodInfo.funFact
+                    updatedItem.nutrition = foodInfo.nutrition
                     
-                    // Also update the item if it's already in the main array (for existing items).
-                    if let index = self.foodItems.firstIndex(where: { $0.id == item.id }) {
-                        self.foodItems[index].name = foodInfo.name
-                        self.foodItems[index].funFact = foodInfo.funFact
-                        self.foodItems[index].nutrition = foodInfo.nutrition
-                        
-                        // This ensures the detail view gets the new data and refreshes its UI.
-                        if self.selectedFoodItem?.id == self.foodItems[index].id {
-                            self.selectedFoodItem = self.foodItems[index]
-                        }
-                        
-                        // Re-save the updated data.
-                        self.persistenceService.save(items: self.foodItems)
-                        print("Successfully analyzed and updated item: \(foodInfo.name)")
-                    }
                 case .failure(let error):
-                    // If analysis fails, mark it as "N/A" so the UI can respond.
-                    if self.newSticker?.id == item.id {
-                        self.newSticker?.name = "N/A"
-                    }
-                    if let index = self.foodItems.firstIndex(where: { $0.id == item.id }) {
-                        self.foodItems[index].name = "N/A"
-                    }
+                    updatedItem.name = "N/A"
                     print("Food analysis failed for item \(item.id): \(error)")
+                }
+
+                // If this was the new sticker, update the binding.
+                // The main array will be updated when the user dismisses the sheet.
+                if self.newSticker?.id == updatedItem.id {
+                    self.newSticker = updatedItem
                 }
             }
         }

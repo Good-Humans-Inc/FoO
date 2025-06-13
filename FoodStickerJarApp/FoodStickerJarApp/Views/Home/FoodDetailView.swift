@@ -81,7 +81,7 @@ struct FoodDetailView: View {
                             .frame(maxWidth: .infinity, alignment: .leading)
                         } else if foodItem.name == "N/A" {
                             // Case: Unidentifiable.
-                            Text("We couldn't identify this. Please try again!")
+                            Text("You better not eat that")
                                 .font(.body)
                                 .foregroundColor(.secondary)
                                 .multilineTextAlignment(.center)
