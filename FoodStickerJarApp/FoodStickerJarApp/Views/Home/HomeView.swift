@@ -4,8 +4,10 @@ struct HomeView: View {
     // Access the shared ViewModel from the environment.
     @EnvironmentObject var viewModel: HomeViewModel
     
-    // Manages the presentation of the entire image processing flow.
+    // Manages the presentation of the image picker and cropper.
     @State private var showImageProcessingSheet = false
+    // Manages the presentation of the new sticker detail card.
+    @State private var showNewStickerSheet = false
 
     var body: some View {
         ZStack {
@@ -71,20 +73,51 @@ struct HomeView: View {
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)
         }
-        // MARK: - Sheet Modifier
+        // MARK: - Sheet Modifiers
         
-        // This single sheet manages the entire flow from camera to final sticker.
-        .sheet(isPresented: $showImageProcessingSheet) {
+        // This sheet manages the image picking and cropping flow.
+        .sheet(isPresented: $showImageProcessingSheet, onDismiss: {
+            // When this sheet closes, if a new sticker was created, show the detail sheet.
+            if viewModel.newSticker != nil {
+                showNewStickerSheet = true
+            }
+        }) {
             ImageProcessingView { finalStickerImage in
-                // This is the final step. Add the sticker and dismiss the sheet.
-                viewModel.addNewSticker(stickerImage: finalStickerImage)
+                // This is the first step. Create the item and dismiss the cropper.
+                viewModel.startStickerCreation(stickerImage: finalStickerImage)
                 showImageProcessingSheet = false
             }
         }
         
-        // Full screen cover for showing the sticker detail.
-        .fullScreenCover(item: $viewModel.selectedFoodItem) { item in
-            FoodDetailView(foodItem: item)
+        // This sheet shows the detail card for the newly created sticker.
+        .sheet(isPresented: $showNewStickerSheet, onDismiss: {
+            // When this sheet is dismissed, commit the new sticker to the jar.
+            viewModel.commitNewSticker()
+        }) {
+            // We need to provide a binding to the non-optional FoodItem.
+            // Create a custom binding that safely unwraps the optional viewModel.newSticker.
+            // If the binding can't be created (i.e., newSticker is nil), show an empty view.
+            if let newStickerBinding = Binding($viewModel.newSticker) {
+                FoodDetailView(foodItem: newStickerBinding)
+            } else {
+                Text("Creating sticker...")
+                    .onAppear {
+                        // Failsafe: if the view appears without a sticker, dismiss it.
+                        showNewStickerSheet = false
+                    }
+            }
+        }
+        
+        // Full screen cover for showing the sticker detail from the jar.
+        .fullScreenCover(item: $viewModel.selectedFoodItem) { selectedItem in
+            // Find the index of the selected item to create a binding.
+            // This ensures that any changes in the detail view are reflected back in the source array.
+            if let index = viewModel.foodItems.firstIndex(where: { $0.id == selectedItem.id }) {
+                FoodDetailView(foodItem: $viewModel.foodItems[index])
+            } else {
+                // Failsafe in case the item disappears while selected.
+                Text("Sticker not found")
+            }
         }
     }
 }
