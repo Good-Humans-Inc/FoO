@@ -13,3 +13,4 @@ struct FoodStickerJarApp: App {
         }
     }
 }
+  

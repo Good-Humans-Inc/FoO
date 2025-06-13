@@ -27,9 +27,9 @@ struct ImageProcessingView: View {
         switch currentState {
         case .camera:
             CameraView { image in
-                // When an image is picked, resize it and move to the cropping state.
-                let resizedImage = image.resized(toMaxSize: 1024)
-                currentState = .cropping(resizedImage)
+                // By removing the resize step here, the user gets to crop the exact
+                // image they saw in the camera preview.
+                currentState = .cropping(image)
             }
             .ignoresSafeArea()
             
@@ -154,9 +154,10 @@ private struct SubjectLiftContainerView: View {
                     let subjectImage = try await interaction.image(for: [mainSubject])
                     print("Subject image extracted. Applying sticker effect...")
                     
-                    if let stickerImage = subjectImage.addingStickerOutline(width: 20, color: .white) {
+                    if let stickerWithOutline = subjectImage.addingStickerOutline(width: 20, color: .white) {
+                        let finalSticker = stickerWithOutline.resized(toMaxSize: 512)
                         print("Sticker created successfully. Completing process.")
-                        onComplete(stickerImage)
+                        onComplete(finalSticker)
                     } else {
                         print("Error: Failed to apply sticker outline.")
                         self.analysisState = .noSubjectsFound

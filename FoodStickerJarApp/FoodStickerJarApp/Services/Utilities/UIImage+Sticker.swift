@@ -39,19 +39,20 @@ extension UIImage {
         
         // --- Step 2: Use UIGraphicsImageRenderer for robust final compositing ---
         
-        // The final canvas size needs to accommodate the original image plus the outline on all sides.
-        let finalSize = CGSize(width: self.size.width + width * 2, height: self.size.height + width * 2)
+        // --- FIX: Create the final canvas based on the sticker shape itself ---
+        // This is the key fix. It ensures the canvas is the exact size of the
+        // generated sticker outline, preventing alignment and clipping errors.
+        let finalSize = stickerShape.extent.size
         let renderer = UIGraphicsImageRenderer(size: finalSize)
         
         let finalImage = renderer.image { ctx in
-            // First, render the CIImage of the sticker base to a CGImage.
+            // Render the CIImage of the sticker base to a CGImage.
             guard let stickerBaseCgImage = context.createCGImage(stickerBaseCiImage, from: stickerShape.extent) else { return }
             
-            // Draw the sticker base at the origin of the renderer's context.
-            let baseImage = UIImage(cgImage: stickerBaseCgImage)
-            baseImage.draw(at: .zero)
+            // Draw the sticker base at the origin of the new canvas. It will fill it perfectly.
+            UIImage(cgImage: stickerBaseCgImage).draw(at: .zero)
 
-            // Finally, draw the original image on top, centered.
+            // Finally, draw the original image on top, offset by the border width to center it.
             self.draw(at: CGPoint(x: width, y: width))
         }
         
