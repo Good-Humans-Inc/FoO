@@ -26,68 +26,76 @@ struct FoodDetailView: View {
             }
             .padding([.top, .horizontal])
             
-            // Sticker Image
-            Group {
-                if let image = foodItem.image {
-                    Image(uiImage: image)
-                        .resizable()
-                } else {
-                    // Show a placeholder if the image data is invalid
-                    Image(systemName: "photo")
-                        .resizable()
-                        .foregroundColor(.gray)
-                }
-            }
-            .aspectRatio(contentMode: .fit)
-            .frame(maxHeight: 350)
-            .shadow(color: .black.opacity(0.2), radius: 15, y: 10)
-            .padding(.horizontal, 40)
-            .padding(.bottom, 20)
-
-            // Info Section
-            VStack(spacing: 16) {
-                // Name and Date
+            ScrollView {
                 VStack {
-                    if let name = foodItem.name, name != "N/A" {
-                        Text(name)
-                            .font(.system(size: 32, weight: .bold, design: .serif))
-                        
-                    } else if foodItem.name == "N/A" {
-                        Text("Not a Food Item")
-                            .font(.system(size: 24, weight: .semibold, design: .serif))
-                        
-                    } else {
-                        // Show a loading/analyzing state
-                        Text("Analyzing...")
-                            .font(.system(size: 24, weight: .semibold, design: .serif))
+                    // Sticker Image
+                    Group {
+                        if let image = foodItem.image {
+                            Image(uiImage: image)
+                                .resizable()
+                        } else {
+                            // Show a placeholder if the image data is invalid
+                            Image(systemName: "photo")
+                                .resizable()
+                                .foregroundColor(.gray)
+                        }
                     }
-                }
-                .multilineTextAlignment(.center)
-                .padding(.bottom, 10)
-                
-                Divider()
-                
-                // Details
-                if let name = foodItem.name, name != "N/A" {
-                    VStack(alignment: .leading, spacing: 16) {
-                        InfoRow(title: "Do you know?", content: foodItem.funFact ?? "...")
-                        InfoRow(title: "Nutrition", content: foodItem.nutrition ?? "...")
-                    }
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                } else if foodItem.name == "N/A" {
-                    Text("We couldn't identify this as a food item. Please try again with another delicious dish!")
-                        .font(.body)
-                        .foregroundColor(.secondary)
+                    .aspectRatio(contentMode: .fit)
+                    .frame(maxHeight: 350)
+                    .shadow(color: .black.opacity(0.2), radius: 15, y: 10)
+                    .padding(.horizontal, 40)
+                    .padding(.bottom, 20)
+
+                    // Info Section
+                    VStack(spacing: 16) {
+                        // Name and Date
+                        VStack {
+                            if let name = foodItem.name {
+                                Text(name)
+                                    .font(.system(size: 32, weight: .bold, design: .serif))
+                            } else {
+                                // Show a loading/analyzing state
+                                Text("Analyzing...")
+                                    .font(.system(size: 24, weight: .semibold, design: .serif))
+                            }
+                        }
                         .multilineTextAlignment(.center)
-                        .padding(.top)
-                } else {
-                    ProgressView()
-                        .padding(.top)
+                        .padding(.bottom, 10)
+                        
+                        Divider()
+                        
+                        // Details
+                        if foodItem.funFact == "NOT_FOOD" {
+                            // Case: Not a food item. Display the funny line from the backend.
+                            Text(foodItem.nutrition ?? "Oh, you eat that? Come on.")
+                                .font(.body)
+                                .foregroundColor(.secondary)
+                                .multilineTextAlignment(.center)
+                                .padding(.top)
+                        } else if let funFact = foodItem.funFact, let nutrition = foodItem.nutrition, foodItem.name != "N/A" {
+                            // Case: It's a food item with full details.
+                            VStack(alignment: .leading, spacing: 16) {
+                                InfoRow(title: "Do you know?", content: funFact)
+                                InfoRow(title: "Nutrition", content: nutrition)
+                            }
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                        } else if foodItem.name == "N/A" {
+                            // Case: Unidentifiable.
+                            Text("We couldn't identify this. Please try again!")
+                                .font(.body)
+                                .foregroundColor(.secondary)
+                                .multilineTextAlignment(.center)
+                                .padding(.top)
+                        } else {
+                            // Case: Still loading.
+                            ProgressView()
+                                .padding(.top)
+                        }
+                    }
+                    .padding(.horizontal, 30)
+                    .padding(.bottom) // Add some space at the very end of the scrollable content
                 }
             }
-            .padding(.horizontal, 30)
-            
-            Spacer()
         }
         .background(Color(.systemGray6).ignoresSafeArea())
     }

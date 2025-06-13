@@ -16,14 +16,17 @@ class PersistenceService {
     /// Saves an array of FoodItem objects to a JSON file.
     /// - Parameter items: The array of `FoodItem` to save.
     func save(items: [FoodItem]) {
-        do {
-            // Use JSONEncoder to convert the array of items into JSON data.
-            let data = try JSONEncoder().encode(items)
-            // Write the data to our file URL.
-            try data.write(to: dataURL, options: .atomic)
-        } catch {
-            // If anything goes wrong, print an error.
-            print("Error saving food items: \(error.localizedDescription)")
+        // Run the save operation on a background thread to avoid blocking the UI.
+        DispatchQueue.global(qos: .background).async {
+            do {
+                // Use JSONEncoder to convert the array of items into JSON data.
+                let data = try JSONEncoder().encode(items)
+                // Write the data to our file URL.
+                try data.write(to: self.dataURL, options: .atomic)
+            } catch {
+                // If anything goes wrong, print an error.
+                print("Error saving food items: \(error.localizedDescription)")
+            }
         }
     }
     

@@ -92,7 +92,7 @@ class HomeViewModel: ObservableObject {
         jarScene.addSticker(item: itemToAdd)
         
         // Clear the temporary item.
-        self.newSticker = nil
+        // self.newSticker = nil // This will be handled by the view now.
     }
     
     // MARK: - Private Methods
