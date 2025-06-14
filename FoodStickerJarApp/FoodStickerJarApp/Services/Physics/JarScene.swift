@@ -2,15 +2,15 @@ import SpriteKit
 import CoreMotion
 import Combine
 
-/// The physics scene that manages the sticker nodes in the jar.
 class JarScene: SKScene, SKPhysicsContactDelegate {
     
     // MARK: - Properties
     
     private let motionManager = CMMotionManager()
     
-    // A Combine subject that broadcasts the ID of a tapped sticker node.
-    let onStickerTapped = PassthroughSubject<String, Never>()
+    // A Combine publisher that will send the ID of a tapped sticker.
+    // The HomeViewModel will subscribe to this.
+    let onStickerTapped = PassthroughSubject<UUID, Never>()
     
     // Properties to handle dragging stickers
     private var draggedNode: SKNode?
@@ -48,17 +48,14 @@ class JarScene: SKScene, SKPhysicsContactDelegate {
         guard let touch = touches.first else { return }
         let location = touch.location(in: self)
         
-        // Find the node that was tapped.
-        if let tappedNode = atPoint(location) as? SKSpriteNode, let tappedID = tappedNode.name {
-            // Broadcast the ID of the tapped sticker.
-            onStickerTapped.send(tappedID)
-            
-            // Add a fun little "pop" effect on tap.
-            let popAction = SKAction.sequence([
-                SKAction.scale(to: 1.2, duration: 0.1),
-                SKAction.scale(to: 1.0, duration: 0.1)
-            ])
-            tappedNode.run(popAction)
+        // Find a sticker node at the touch location.
+        if let node = self.nodes(at: location).first(where: { $0.physicsBody?.categoryBitMask == PhysicsCategory.sticker }) {
+            // Start tracking the node for a potential drag or tap.
+            draggedNode = node
+            touchStartPos = location
+            nodeStartPos = node.position
+            // Temporarily disable physics simulation for the dragged node.
+            node.physicsBody?.isDynamic = false
         }
     }
     
@@ -79,6 +76,16 @@ class JarScene: SKScene, SKPhysicsContactDelegate {
             return
         }
 
+        // Determine if the action was a tap or a drag.
+        let location = touch.location(in: self)
+        let distance = hypot(location.x - touchStartPos.x, location.y - touchStartPos.y)
+        
+        if distance < 15 { // Treat as a tap if movement was minimal.
+            if let nodeName = draggedNode.name, let itemID = UUID(uuidString: nodeName) {
+                onStickerTapped.send(itemID)
+            }
+        }
+        
         // Re-enable physics and clean up.
         cleanupDrag()
     }
@@ -107,53 +114,33 @@ class JarScene: SKScene, SKPhysicsContactDelegate {
     
     // MARK: - Public Methods
     
-    /// Populates the jar with an array of food items when the app starts.
+    /// Populates the jar with an initial set of stickers when the app loads.
     func populateJar(with items: [FoodItem]) {
-        // Clear existing stickers to avoid duplicates.
-        removeAllChildren()
-        
         for item in items {
-            // Re-use the same addSticker logic, but place them randomly at the bottom.
-            guard let texture = item.thumbnailImage.flatMap({ SKTexture(image: $0) }),
-                  let id = item.id else { continue }
-            
-            let stickerNode = SKSpriteNode(texture: texture)
-            stickerNode.size = CGSize(width: 80, height: 80)
-            stickerNode.name = id
-            
-            // Random position within the bottom half of the jar.
-            let randomX = CGFloat.random(in: frame.minX + 50 ... frame.maxX - 50)
-            let randomY = CGFloat.random(in: frame.minY + 50 ... frame.midY)
-            stickerNode.position = CGPoint(x: randomX, y: randomY)
-            
-            stickerNode.physicsBody = SKPhysicsBody(circleOfRadius: stickerNode.size.width / 2)
-            stickerNode.physicsBody?.restitution = 0.3
-            
-            addChild(stickerNode)
+            guard let image = item.thumbnailImage else { continue }
+            let node = createStickerNode(for: item.id, image: image)
+            // Place existing stickers randomly inside the jar.
+            node.position = CGPoint(
+                x: CGFloat.random(in: frame.minX...frame.maxX),
+                y: CGFloat.random(in: frame.minY...frame.maxY)
+            )
+            addChild(node)
         }
     }
     
-    /// Adds a single sticker to the scene.
+    /// Adds a single new sticker, animating it falling from the top.
     func addSticker(item: FoodItem) {
-        guard let texture = item.thumbnailImage.flatMap({ SKTexture(image: $0) }),
-              let id = item.id else { return }
+        // Also use the thumbnail for the newly added sticker in the scene.
+        guard let image = item.thumbnailImage else { return }
+        let node = createStickerNode(for: item.id, image: image)
         
-        let stickerNode = SKSpriteNode(texture: texture)
-        stickerNode.size = CGSize(width: 80, height: 80) // A good, uniform size
+        // Start the new sticker at the top-center of the jar.
+        node.position = CGPoint(x: frame.midX, y: frame.maxY)
         
-        // Use the item's ID as the node's name for later identification.
-        stickerNode.name = id
+        // Give the sticker a slight downward push to start its fall.
+        node.physicsBody?.velocity = CGVector(dx: 0, dy: -50)
         
-        // Position the sticker at the top-center of the scene to let it fall.
-        let spawnPoint = CGPoint(x: frame.midX, y: frame.maxY - 50)
-        stickerNode.position = spawnPoint
-        
-        // Add physics body for collision detection and movement.
-        stickerNode.physicsBody = SKPhysicsBody(circleOfRadius: stickerNode.size.width / 2)
-        stickerNode.physicsBody?.restitution = 0.3 // A little bouncy
-        stickerNode.physicsBody?.allowsRotation = true
-        
-        addChild(stickerNode)
+        addChild(node)
     }
 
     // MARK: - Private Helper Methods

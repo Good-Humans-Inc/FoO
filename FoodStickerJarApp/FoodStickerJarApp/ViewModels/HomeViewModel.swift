@@ -31,7 +31,7 @@ class HomeViewModel: ObservableObject {
     let jarScene = JarScene(size: .zero)
     
     // The service responsible for saving and loading data.
-    private let firestoreService = FirestoreService()
+    private var persistenceService: PersistenceService?
     // The service for analyzing food images.
     private let analysisService = FoodAnalysisService()
     
@@ -40,9 +40,6 @@ class HomeViewModel: ObservableObject {
 
     // A flag to ensure the scene is set up only once.
     private var hasSceneBeenSetUp = false
-
-    // Hold onto the user's ID
-    @Published private var uid: String?
 
     // MARK: - Initializer
     
@@ -54,15 +51,19 @@ class HomeViewModel: ObservableObject {
         // Listen for the user to be authenticated.
         authService.$user
             .compactMap { $0?.uid } // We only care when we get a non-nil UID.
-            .assign(to: \.uid, on: self) // Assign the UID to our local property.
-            .store(in: &cancellables)
-        
-        // When the UID is set, load the user's data.
-        $uid
-            .compactMap { $0 }
-            .first()
+            .first() // We only need to do this setup once.
             .sink { [weak self] uid in
-                self?.loadFoodItems(for: uid)
+                guard let self = self else { return }
+                
+                print("User authenticated with UID: \(uid). Initializing persistence.")
+                // Now that we have a UID, initialize the persistence service.
+                self.persistenceService = PersistenceService(uid: uid)
+                
+                // If the scene is already set up, load the items.
+                // Otherwise, the data will be loaded when setupScene is called.
+                if self.hasSceneBeenSetUp {
+                    self.loadFoodItems()
+                }
             }
             .store(in: &cancellables)
     }
@@ -78,6 +79,11 @@ class HomeViewModel: ObservableObject {
         
         jarScene.size = size
         hasSceneBeenSetUp = true
+        
+        // If the persistence service is ready, load the data now.
+        if persistenceService != nil {
+            loadFoodItems()
+        }
     }
     
     /// Creates a new `FoodItem` from an image, stores it temporarily,
@@ -101,23 +107,20 @@ class HomeViewModel: ObservableObject {
     /// saves it, and adds it to the physics scene. This function is called
     /// by the view when the detail sheet is dismissed.
     func commitNewSticker() {
-        guard let itemToAdd = stickerToCommit, let uid = uid else { return }
+        // Use the private, safe-guarded copy of the sticker.
+        guard let itemToAdd = stickerToCommit else { return }
         
-        // Save the sticker to Firestore.
-        firestoreService.saveSticker(itemToAdd, for: uid) { [weak self] result in
-            DispatchQueue.main.async {
-                switch result {
-                case .success(let savedItem):
-                    // Add the sticker to the main data array and the scene.
-                    self?.foodItems.append(savedItem)
-                    self?.jarScene.addSticker(item: savedItem)
-                case .failure(let error):
-                    print("Error saving sticker to Firestore: \(error.localizedDescription)")
-                }
-                // Clear the temporary item.
-                self?.stickerToCommit = nil
-            }
-        }
+        // 1. Add the sticker to the main data array.
+        foodItems.append(itemToAdd)
+        
+        // 2. Save the updated array.
+        persistenceService?.save(items: foodItems)
+        
+        // 3. Add the sticker to the physics scene, triggering the animation.
+        jarScene.addSticker(item: itemToAdd)
+        
+        // 4. Clear the temporary item.
+        stickerToCommit = nil
     }
     
     // MARK: - Private Methods
@@ -141,7 +144,7 @@ class HomeViewModel: ObservableObject {
                     
                 case .failure(let error):
                     updatedItem.name = "N/A"
-                    print("Food analysis failed for item \(item.id ?? "Unknown"): \(error)")
+                    print("Food analysis failed for item \(item.id): \(error)")
                 }
 
                 // If this was the new sticker, update the temporary properties.
@@ -155,24 +158,20 @@ class HomeViewModel: ObservableObject {
     }
     
     /// Loads the saved food items from disk and populates the scene.
-    private func loadFoodItems(for uid: String) {
-        firestoreService.fetchStickers(for: uid) { [weak self] result in
-            DispatchQueue.main.async {
-                switch result {
-                case .success(let items):
-                    self?.foodItems = items
-                    self?.jarScene.populateJar(with: items)
-                case .failure(let error):
-                    print("Error fetching stickers: \(error.localizedDescription)")
-                }
-            }
+    private func loadFoodItems() {
+        guard let persistenceService = persistenceService else {
+            print("Cannot load items: persistence service not available.")
+            return
         }
+        self.foodItems = persistenceService.load()
+        // Pass the loaded items to the physics scene to populate the jar.
+        jarScene.populateJar(with: self.foodItems)
     }
     
     /// Listens for tap events broadcasted from the JarScene.
     private func setupJarSceneCommunication() {
         jarScene.onStickerTapped
-            .receive(on: DispatchQueue.main)
+            .receive(on: DispatchQueue.main) // Ensure we switch to the main thread
             .sink { [weak self] tappedItemID in
                 // Find the food item that corresponds to the tapped sticker's ID.
                 self?.selectedFoodItem = self?.foodItems.first(where: { $0.id == tappedItemID })
