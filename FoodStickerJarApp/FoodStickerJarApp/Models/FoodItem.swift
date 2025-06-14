@@ -35,6 +35,9 @@ struct FoodItem: Identifiable, Codable, Equatable, Hashable {
         
         // We store the image as PNG data for persistence.
         self.imageData = image.pngData() ?? Data()
+        print("==================================================")
+        print("STICKER SIZE LOG (PNG): \(self.imageData.count) bytes")
+        print("==================================================")
         
         // Create and store a smaller thumbnail for efficient loading in the jar.
         let thumbnail = image.resized(toMaxSize: 150) // 150px is a good size for the jar
