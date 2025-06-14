@@ -155,7 +155,7 @@ private struct SubjectLiftContainerView: View {
                     print("Subject image extracted. Applying sticker effect...")
                     
                     if let stickerWithOutline = subjectImage.addingStickerOutline(width: 20, color: .white) {
-                        let finalSticker = stickerWithOutline.resized(toMaxSize: 512)
+                        let finalSticker = stickerWithOutline.resized(toMaxSize: 250)
                         print("Sticker created successfully. Completing process.")
                         onComplete(finalSticker)
                     } else {
