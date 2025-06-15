@@ -24,6 +24,10 @@ class HomeViewModel: ObservableObject {
     // when the view is dismissed.
     private var stickerToCommit: FoodItem?
     
+    // State properties for managing the sticker creation UI flow.
+    @Published var isSavingSticker = false
+    @Published var stickerCreationError: String?
+    
     // MARK: - Services and Engine
     
     // A single, persistent instance of the physics scene. This is crucial
@@ -93,20 +97,47 @@ class HomeViewModel: ObservableObject {
     }
     
     /// Creates a new `FoodItem` from an image, stores it temporarily,
-    /// and kicks off the background analysis.
+    /// and kicks off the background analysis. This function now handles the full
+    /// upload and save process, updating state properties for the UI.
     /// - Parameter stickerImage: The final `UIImage` of the sticker.
-    /// - Returns: The `FoodItem` that was created.
-    @discardableResult
-    func startStickerCreation(stickerImage: UIImage) -> FoodItem {
-        let newItem = FoodItem(image: stickerImage)
-        // Hold this new item temporarily to be shown in the sheet.
-        self.newSticker = newItem
-        self.stickerToCommit = newItem // Keep an initial copy
+    func createAndSaveSticker(stickerImage: UIImage) async {
+        // 1. Set state to show a loading UI.
+        await MainActor.run {
+            self.stickerCreationError = nil
+            self.isSavingSticker = true
+        }
+
+        guard let userId = self.userId else {
+            await MainActor.run {
+                self.stickerCreationError = "User not authenticated. Cannot save sticker."
+                self.isSavingSticker = false
+            }
+            return
+        }
         
-        // Kick off the background analysis.
-        analyzeFoodItem(newItem)
-        
-        return newItem
+        do {
+            // 2. This one call now handles image uploads and saving the metadata to Firestore.
+            let newItem = try await firestoreService.createSticker(from: stickerImage, for: userId)
+            
+            // 3. Hold this new item to be shown in the detail view and committed to the jar.
+            await MainActor.run {
+                self.newSticker = newItem
+                self.stickerToCommit = newItem
+                self.isSavingSticker = false // Done saving
+            }
+            
+            // 4. Kick off the background analysis.
+            analyzeFoodItem(newItem, image: stickerImage)
+            
+        } catch {
+            // 5. If any part of the process fails, publish the error.
+            await MainActor.run {
+                print("❌ HomeViewModel: Failed to create and save sticker.")
+                print("   - Error: \(error.localizedDescription)")
+                self.stickerCreationError = error.localizedDescription
+                self.isSavingSticker = false
+            }
+        }
     }
     
     /// Commits the temporarily held new sticker to the main collection,
@@ -122,13 +153,8 @@ class HomeViewModel: ObservableObject {
         // 1. Add the sticker to the main data array.
         foodItems.append(itemToAdd)
         
-        // 2. Save the sticker to Firestore.
-        if let userId = self.userId {
-            print("HomeViewModel: Calling FirestoreService to save sticker.")
-            firestoreService.saveSticker(itemToAdd, for: userId)
-        } else {
-            print("HomeViewModel: Cannot save to Firestore, user ID is missing.")
-        }
+        // 2. The sticker is already saved to Firestore, so we just log it.
+        print("HomeViewModel: Committing pre-saved sticker \(itemToAdd.id.uuidString) to the UI.")
         
         // 3. Add the sticker to the physics scene, triggering the animation.
         jarScene.addSticker(item: itemToAdd)
@@ -160,9 +186,7 @@ class HomeViewModel: ObservableObject {
     
     /// Triggers the background analysis of a food item.
     /// When complete, it only updates the temporary `newSticker` property.
-    private func analyzeFoodItem(_ item: FoodItem) {
-        guard let image = item.image else { return }
-        
+    private func analyzeFoodItem(_ item: FoodItem, image: UIImage) {
         analysisService.analyzeFoodImage(image) { [weak self] result in
             guard let self = self else { return }
             

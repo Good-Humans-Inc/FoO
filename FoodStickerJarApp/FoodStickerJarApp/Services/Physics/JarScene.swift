@@ -1,6 +1,7 @@
 import SpriteKit
 import CoreMotion
 import Combine
+import Kingfisher
 
 class JarScene: SKScene, SKPhysicsContactDelegate {
     
@@ -116,31 +117,45 @@ class JarScene: SKScene, SKPhysicsContactDelegate {
     
     /// Populates the jar with an initial set of stickers when the app loads.
     func populateJar(with items: [FoodItem]) {
+        // Clear existing stickers before adding new ones.
+        self.children.filter { $0.physicsBody?.categoryBitMask == PhysicsCategory.sticker }.forEach { $0.removeFromParent() }
+
         for item in items {
-            guard let image = item.thumbnailImage else { continue }
-            let node = createStickerNode(for: item.id, image: image)
-            // Place existing stickers randomly inside the jar.
-            node.position = CGPoint(
-                x: CGFloat.random(in: frame.minX...frame.maxX),
-                y: CGFloat.random(in: frame.minY...frame.maxY)
-            )
-            addChild(node)
+            // Asynchronously load the image and add the sticker.
+            addSticker(item: item, isInitialPopulation: true)
         }
     }
     
     /// Adds a single new sticker, animating it falling from the top.
-    func addSticker(item: FoodItem) {
-        // Also use the thumbnail for the newly added sticker in the scene.
-        guard let image = item.thumbnailImage else { return }
-        let node = createStickerNode(for: item.id, image: image)
+    func addSticker(item: FoodItem, isInitialPopulation: Bool = false) {
+        guard let url = URL(string: item.thumbnailURLString) else { return }
         
-        // Start the new sticker at the top-center of the jar.
-        node.position = CGPoint(x: frame.midX, y: frame.maxY)
-        
-        // Give the sticker a slight downward push to start its fall.
-        node.physicsBody?.velocity = CGVector(dx: 0, dy: -50)
-        
-        addChild(node)
+        // Use Kingfisher to download the image from the URL.
+        ImageDownloader.default.downloadImage(with: url) { [weak self] result in
+            guard let self = self else { return }
+            
+            if case .success(let value) = result {
+                // Ensure UI updates are on the main thread.
+                DispatchQueue.main.async {
+                    let node = self.createStickerNode(for: item.id, image: value.image)
+                    
+                    if isInitialPopulation {
+                        // Place existing stickers randomly inside the jar.
+                        node.position = CGPoint(
+                            x: CGFloat.random(in: self.frame.minX...self.frame.maxX),
+                            y: CGFloat.random(in: self.frame.minY...self.frame.maxY)
+                        )
+                    } else {
+                        // Start the new sticker at the top-center of the jar.
+                        node.position = CGPoint(x: self.frame.midX, y: self.frame.maxY)
+                        // Give the sticker a slight downward push to start its fall.
+                        node.physicsBody?.velocity = CGVector(dx: 0, dy: -50)
+                    }
+                    
+                    self.addChild(node)
+                }
+            }
+        }
     }
 
     // MARK: - Private Helper Methods

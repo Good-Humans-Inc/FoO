@@ -21,6 +21,8 @@
 		2C3C4D412DFCBFEC005E2C14 /* FirebaseFirestoreCombine-Community in Frameworks */ = {isa = PBXBuildFile; productRef = 2C3C4D402DFCBFEC005E2C14 /* FirebaseFirestoreCombine-Community */; };
 		2C3C4D432DFCBFEC005E2C14 /* FirebaseFunctions in Frameworks */ = {isa = PBXBuildFile; productRef = 2C3C4D422DFCBFEC005E2C14 /* FirebaseFunctions */; };
 		2C3C4D452DFCBFEC005E2C14 /* FirebaseVertexAI in Frameworks */ = {isa = PBXBuildFile; productRef = 2C3C4D442DFCBFEC005E2C14 /* FirebaseVertexAI */; };
+		2C7E99832DFE8262002E2A07 /* Kingfisher in Frameworks */ = {isa = PBXBuildFile; productRef = 2C7E99822DFE8262002E2A07 /* Kingfisher */; };
+		2C7E99BE2DFE8320002E2A07 /* FirebaseStorage in Frameworks */ = {isa = PBXBuildFile; productRef = 2C7E99BD2DFE8320002E2A07 /* FirebaseStorage */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -43,11 +45,13 @@
 			files = (
 				2C3C4D332DFCBFEC005E2C14 /* FirebaseAnalyticsIdentitySupport in Frameworks */,
 				2C3C4D372DFCBFEC005E2C14 /* FirebaseAuthCombine-Community in Frameworks */,
+				2C7E99832DFE8262002E2A07 /* Kingfisher in Frameworks */,
 				2C3C4D352DFCBFEC005E2C14 /* FirebaseAuth in Frameworks */,
 				2C3C4D432DFCBFEC005E2C14 /* FirebaseFunctions in Frameworks */,
 				2C3C4D3F2DFCBFEC005E2C14 /* FirebaseFirestore in Frameworks */,
 				2C3C4D2F2DFCBFEC005E2C14 /* FirebaseAnalytics in Frameworks */,
 				2C3C4D412DFCBFEC005E2C14 /* FirebaseFirestoreCombine-Community in Frameworks */,
+				2C7E99BE2DFE8320002E2A07 /* FirebaseStorage in Frameworks */,
 				2C3C4D392DFCBFEC005E2C14 /* FirebaseCore in Frameworks */,
 				2C3C4D3B2DFCBFEC005E2C14 /* FirebaseCrashlytics in Frameworks */,
 				2C3C4D3D2DFCBFEC005E2C14 /* FirebaseDatabase in Frameworks */,
@@ -110,6 +114,8 @@
 				2C3C4D402DFCBFEC005E2C14 /* FirebaseFirestoreCombine-Community */,
 				2C3C4D422DFCBFEC005E2C14 /* FirebaseFunctions */,
 				2C3C4D442DFCBFEC005E2C14 /* FirebaseVertexAI */,
+				2C7E99822DFE8262002E2A07 /* Kingfisher */,
+				2C7E99BD2DFE8320002E2A07 /* FirebaseStorage */,
 			);
 			productName = FoodStickerJarApp;
 			productReference = 2C3C4B932DFB72F5005E2C14 /* FoodStickerJarApp.app */;
@@ -141,6 +147,7 @@
 			minimizedProjectReferenceProxies = 1;
 			packageReferences = (
 				2C3C4D2B2DFCBFEC005E2C14 /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */,
+				2C7E99812DFE8262002E2A07 /* XCRemoteSwiftPackageReference "Kingfisher" */,
 			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = 2C3C4B942DFB72F5005E2C14 /* Products */;
@@ -323,7 +330,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 1.0;
+				MARKETING_VERSION = 1.2;
 				PRODUCT_BUNDLE_IDENTIFIER = yanffyy.xyz.FoodStickerJarApp;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_EMIT_LOC_STRINGS = YES;
@@ -356,7 +363,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 1.0;
+				MARKETING_VERSION = 1.2;
 				PRODUCT_BUNDLE_IDENTIFIER = yanffyy.xyz.FoodStickerJarApp;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_EMIT_LOC_STRINGS = YES;
@@ -395,6 +402,14 @@
 			requirement = {
 				kind = upToNextMajorVersion;
 				minimumVersion = 11.14.0;
+			};
+		};
+		2C7E99812DFE8262002E2A07 /* XCRemoteSwiftPackageReference "Kingfisher" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/onevcat/Kingfisher.git";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 8.3.2;
 			};
 		};
 /* End XCRemoteSwiftPackageReference section */
@@ -464,6 +479,16 @@
 			isa = XCSwiftPackageProductDependency;
 			package = 2C3C4D2B2DFCBFEC005E2C14 /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */;
 			productName = FirebaseVertexAI;
+		};
+		2C7E99822DFE8262002E2A07 /* Kingfisher */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 2C7E99812DFE8262002E2A07 /* XCRemoteSwiftPackageReference "Kingfisher" */;
+			productName = Kingfisher;
+		};
+		2C7E99BD2DFE8320002E2A07 /* FirebaseStorage */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 2C3C4D2B2DFCBFEC005E2C14 /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */;
+			productName = FirebaseStorage;
 		};
 /* End XCSwiftPackageProductDependency section */
 	};

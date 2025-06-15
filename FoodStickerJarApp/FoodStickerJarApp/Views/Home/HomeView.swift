@@ -78,35 +78,59 @@ struct HomeView: View {
                 .padding(.bottom, 30)
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)
+            
+            // This overlay will appear on top of the whole view when saving.
+            if viewModel.isSavingSticker {
+                Color.black.opacity(0.5)
+                    .ignoresSafeArea()
+                    .overlay {
+                        VStack {
+                            ProgressView()
+                            Text("Saving Sticker...")
+                                .font(.title2)
+                                .foregroundColor(.white)
+                        }
+                    }
+            }
         }
         // MARK: - Sheet Modifiers
-        
-        // This sheet manages the image picking and cropping flow.
-        .sheet(isPresented: $showImageProcessingSheet) {
-            ImageProcessingView { finalStickerImage in
-                // Set the flag to true before starting the creation process.
-                isCreatingNewSticker = true
-                // This is the first step. Create the item and dismiss the cropper.
-                viewModel.startStickerCreation(stickerImage: finalStickerImage)
-                showImageProcessingSheet = false
+        .sheet(isPresented: $showImageProcessingSheet, onDismiss: {
+            // This onDismiss is now only responsible for committing a *successful* sticker.
+            // The actual creation is handled below.
+            if isCreatingNewSticker {
+                viewModel.commitNewSticker()
+                isCreatingNewSticker = false // Reset the flag
+            }
+        }) {
+            ImageProcessingView { stickerImage in
+                // The processing view is done. We have the image.
+                showImageProcessingSheet = false // Dismiss the sheet...
+                isCreatingNewSticker = true    // ...and set our flag.
+                
+                // Now, kick off the robust save process.
+                Task {
+                    await viewModel.createAndSaveSticker(stickerImage: stickerImage)
+                    
+                    // If the creation fails, the newSticker will be nil, and the cover won't show.
+                    // If it succeeds, the fullScreenCover's `item` will be populated, triggering it.
+                    // The `onDismiss` of the sheet will now correctly commit the sticker.
+                }
             }
         }
         
         // A single, unified full-screen cover for presenting the detail view.
-        .fullScreenCover(item: itemForCover, onDismiss: {
-            // After the cover is dismissed, we check our flag.
-            if isCreatingNewSticker {
-                // If we were creating a sticker, commit it to the jar.
-                viewModel.commitNewSticker()
-            }
-            // Finally, we reset all state properties to ensure a clean slate.
-            isCreatingNewSticker = false
-            viewModel.newSticker = nil
-            viewModel.selectedFoodItem = nil
+        // This now correctly binds to newSticker from the ViewModel.
+        .fullScreenCover(item: $viewModel.newSticker, onDismiss: {
+            // After the cover is dismissed, we were successful, so commit the sticker.
+            viewModel.commitNewSticker()
         }) { _ in
-            // Because our FoodDetailView is now crash-proof and accepts a
-            // binding to an optional, we can pass our computed binding directly.
-            FoodDetailView(foodItem: itemForCover)
+            FoodDetailView(foodItem: $viewModel.newSticker)
+        }
+        // An alert to show if the saving process fails.
+        .alert("Failed to Save Sticker", isPresented: .constant(viewModel.stickerCreationError != nil)) {
+            Button("OK") { viewModel.stickerCreationError = nil }
+        } message: {
+            Text(viewModel.stickerCreationError ?? "An unknown error occurred. Please check your internet connection and try again.")
         }
     }
 }
