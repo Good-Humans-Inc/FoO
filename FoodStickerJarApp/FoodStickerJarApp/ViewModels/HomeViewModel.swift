@@ -96,11 +96,10 @@ class HomeViewModel: ObservableObject {
         }
     }
     
-    /// Creates a new `FoodItem` from an image, stores it temporarily,
-    /// and kicks off the background analysis. This function now handles the full
-    /// upload and save process, updating state properties for the UI.
+    /// This function orchestrates the sticker creation process by running the
+    /// image saving and analysis tasks in parallel for a faster user experience.
     /// - Parameter stickerImage: The final `UIImage` of the sticker.
-    func createAndSaveSticker(stickerImage: UIImage) async {
+    func processNewSticker(stickerImage: UIImage) async {
         // 1. Set state to show a loading UI.
         await MainActor.run {
             self.stickerCreationError = nil
@@ -115,22 +114,48 @@ class HomeViewModel: ObservableObject {
             return
         }
         
+        // 2. Launch saving and analysis tasks in parallel.
+        async let savingTask: FoodItem = firestoreService.createSticker(from: stickerImage, for: userId)
+        async let analysisTask = analysisService.analyzeFoodImage(stickerImage)
+
         do {
-            // 2. This one call now handles image uploads and saving the metadata to Firestore.
-            let newItem = try await firestoreService.createSticker(from: stickerImage, for: userId)
-            
-            // 3. Hold this new item to be shown in the detail view and committed to the jar.
+            // 3. Await the SAVING task first. This is the critical path to showing the UI.
+            let newItem = try await savingTask
+
+            // 4. As soon as we have the new item, show the UI. The loading indicator will hide.
             await MainActor.run {
                 self.newSticker = newItem
-                self.stickerToCommit = newItem
-                self.isSavingSticker = false // Done saving
+                self.stickerToCommit = newItem // Prepare for commit
+                self.isSavingSticker = false // Hide loading overlay
             }
+
+            // 5. Now, await the ANALYSIS task.
+            let analysisResult = await analysisTask
             
-            // 4. Kick off the background analysis.
-            analyzeFoodItem(newItem, image: stickerImage)
+            var updatedItem = newItem
             
+            switch analysisResult {
+            case .success(let foodInfo):
+                updatedItem.name = foodInfo.name
+                updatedItem.funFact = foodInfo.funFact
+                updatedItem.nutrition = foodInfo.nutrition
+            case .failure(let error):
+                // If analysis fails, we still have a sticker. We'll mark it as such.
+                updatedItem.name = "Analysis Failed"
+                print("Food analysis failed: \(error)")
+            }
+
+            // 6. Save the analysis data to Firestore.
+            try await firestoreService.updateSticker(updatedItem, for: userId)
+            
+            // 7. Update the local view model again so the UI reflects the final analysis data.
+            await MainActor.run {
+                self.newSticker = updatedItem
+                self.stickerToCommit = updatedItem
+            }
+
         } catch {
-            // 5. If any part of the process fails, publish the error.
+            // This 'catch' block will catch errors from the `savingTask` (the critical path).
             await MainActor.run {
                 print("❌ HomeViewModel: Failed to create and save sticker.")
                 print("   - Error: \(error.localizedDescription)")
@@ -181,36 +206,6 @@ class HomeViewModel: ObservableObject {
         } catch {
             print("HomeViewModel: An error occurred while loading stickers from Firestore: \(error.localizedDescription)")
             // Optionally, handle the error further (e.g., show an alert to the user).
-        }
-    }
-    
-    /// Triggers the background analysis of a food item.
-    /// When complete, it only updates the temporary `newSticker` property.
-    private func analyzeFoodItem(_ item: FoodItem, image: UIImage) {
-        analysisService.analyzeFoodImage(image) { [weak self] result in
-            guard let self = self else { return }
-            
-            DispatchQueue.main.async {
-                var updatedItem = item
-                
-                switch result {
-                case .success(let foodInfo):
-                    updatedItem.name = foodInfo.name
-                    updatedItem.funFact = foodInfo.funFact
-                    updatedItem.nutrition = foodInfo.nutrition
-                    
-                case .failure(let error):
-                    updatedItem.name = "N/A"
-                    print("Food analysis failed for item \(item.id): \(error)")
-                }
-
-                // If this was the new sticker, update the temporary properties.
-                if self.newSticker?.id == updatedItem.id {
-                    self.newSticker = updatedItem
-                    // Keep a private copy of the fully-updated item.
-                    self.stickerToCommit = updatedItem
-                }
-            }
         }
     }
     

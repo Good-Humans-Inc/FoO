@@ -60,6 +60,24 @@ class FirestoreService {
         return foodItem
     }
     
+    /// Updates an existing sticker document with new data.
+    /// - Parameters:
+    ///   - sticker: The `FoodItem` containing the updated data.
+    ///   - userID: The ID of the currently authenticated user.
+    func updateSticker(_ sticker: FoodItem, for userID: String) async throws {
+        let stickerDocument = db.collection("users").document(userID).collection("stickers").document(sticker.id.uuidString)
+        
+        // This will merge the new data with the existing document,
+        // or create it if it doesn't exist (which shouldn't happen in this flow).
+        try await stickerDocument.setData([
+            "name": sticker.name as Any,
+            "funFact": sticker.funFact as Any,
+            "nutrition": sticker.nutrition as Any
+        ], merge: true)
+        
+        print("✅ FirestoreService: Successfully updated sticker \(sticker.id.uuidString) with analysis data.")
+    }
+    
     /// Loads all food stickers for a given user from Firestore.
     /// - Parameter userID: The ID of the currently authenticated user.
     /// - Returns: An array of `FoodItem` objects.

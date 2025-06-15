@@ -86,7 +86,7 @@ struct HomeView: View {
                     .overlay {
                         VStack {
                             ProgressView()
-                            Text("Saving Sticker...")
+                            Text("Preparing Sticker...")
                                 .font(.title2)
                                 .foregroundColor(.white)
                         }
@@ -107,13 +107,9 @@ struct HomeView: View {
                 showImageProcessingSheet = false // Dismiss the sheet...
                 isCreatingNewSticker = true    // ...and set our flag.
                 
-                // Now, kick off the robust save process.
+                // Now, kick off the robust, parallel save and analysis process.
                 Task {
-                    await viewModel.createAndSaveSticker(stickerImage: stickerImage)
-                    
-                    // If the creation fails, the newSticker will be nil, and the cover won't show.
-                    // If it succeeds, the fullScreenCover's `item` will be populated, triggering it.
-                    // The `onDismiss` of the sheet will now correctly commit the sticker.
+                    await viewModel.processNewSticker(stickerImage: stickerImage)
                 }
             }
         }
