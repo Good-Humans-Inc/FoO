@@ -1,4 +1,5 @@
 import SwiftUI
+import Kingfisher
 
 /// A card-like view that displays the details of a single `FoodItem`.
 /// It shows the full-resolution sticker, its name, and fun facts.
@@ -32,9 +33,16 @@ struct FoodDetailView: View {
                     VStack {
                         // Sticker Image
                         Group {
-                            if let image = foodItem.image {
-                                Image(uiImage: image)
+                            if let imageURL = URL(string: foodItem.imageURLString) {
+                                KFImage(imageURL)
                                     .resizable()
+                                    .placeholder {
+                                        // Show a placeholder while the image is loading
+                                        Image(systemName: "photo")
+                                            .resizable()
+                                            .foregroundColor(.gray)
+                                            .aspectRatio(contentMode: .fit)
+                                    }
                             } else {
                                 // Show a placeholder if the image data is invalid
                                 Image(systemName: "photo")

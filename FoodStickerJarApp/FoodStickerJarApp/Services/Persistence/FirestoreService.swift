@@ -6,35 +6,76 @@ class FirestoreService {
     
     // Get a reference to the Firestore database.
     private let db = Firestore.firestore()
+    // The service for handling file uploads.
+    private let storageService = FirebaseStorageService()
     
-    /// Saves a new food sticker to the user's collection in Firestore.
+    /// Creates a new food sticker by first uploading its images to Firebase Storage
+    /// and then saving the resulting URL metadata to Firestore.
     /// - Parameters:
-    ///   - foodItem: The `FoodItem` object containing all sticker data.
+    ///   - image: The sticker `UIImage` to be processed and saved.
     ///   - userID: The ID of the currently authenticated user.
-    func saveSticker(_ foodItem: FoodItem, for userID: String) {
-        print("FirestoreService: Preparing to save sticker for user ID: \(userID)")
-        print("FirestoreService: Sticker ID: \(foodItem.id.uuidString)")
+    /// - Returns: The fully constructed `FoodItem` with URLs pointing to the stored images.
+    func createSticker(from image: UIImage, for userID: String) async throws -> FoodItem {
+        let stickerID = UUID()
+        let creationDate = Date()
         
-        // Define the path to the user's specific "stickers" collection.
-        let stickerCollection = db.collection("users").document(userID).collection("stickers")
-        
-        // Use the FoodItem's unique ID as the document ID in Firestore.
-        let stickerDocument = stickerCollection.document(foodItem.id.uuidString)
-        
-        // Attempt to encode the FoodItem and save it.
-        do {
-            print("FirestoreService: Encoding FoodItem to be saved...")
-            // The `setData(from:)` method automatically converts the Codable `foodItem`
-            // into a format Firestore can understand.
-            try stickerDocument.setData(from: foodItem)
-            print("✅ FirestoreService: Successfully saved sticker \(foodItem.id.uuidString) to Firestore.")
-        } catch {
-            // If the save operation fails, log the specific error.
-            print("❌ FirestoreService: ERROR saving sticker to Firestore.")
-            print("   - User ID: \(userID)")
-            print("   - Sticker ID: \(foodItem.id.uuidString)")
-            print("   - Error Details: \(error.localizedDescription)")
+        // Prepare image data.
+        guard let imageData = image.pngData() else {
+            throw NSError(domain: "ImageError", code: 0, userInfo: [NSLocalizedDescriptionKey: "Failed to get PNG data from image."])
         }
+        
+        let thumbnail = image.resized(toMaxSize: 150)
+        guard let thumbnailData = thumbnail.pngData() else {
+            throw NSError(domain: "ImageError", code: 1, userInfo: [NSLocalizedDescriptionKey: "Failed to get PNG data from thumbnail."])
+        }
+        
+        // Define paths for Firebase Storage.
+        let imagePath = "stickers/\(userID)/\(stickerID.uuidString).png"
+        let thumbnailPath = "stickers/\(userID)/\(stickerID.uuidString)_thumb.png"
+        
+        // Upload both images concurrently.
+        async let imageURL = storageService.uploadImage(data: imageData, at: imagePath)
+        async let thumbnailURL = storageService.uploadImage(data: thumbnailData, at: thumbnailPath)
+        
+        // Await the results.
+        let (finalImageURL, finalThumbnailURL) = try await (imageURL, thumbnailURL)
+        
+        // Create the Firestore data object.
+        let foodItem = FoodItem(
+            id: stickerID,
+            creationDate: creationDate,
+            imageURLString: finalImageURL.absoluteString,
+            thumbnailURLString: finalThumbnailURL.absoluteString,
+            name: nil,
+            funFact: nil,
+            nutrition: nil
+        )
+        
+        // Save the metadata object to Firestore.
+        let stickerDocument = db.collection("users").document(userID).collection("stickers").document(stickerID.uuidString)
+        try stickerDocument.setData(from: foodItem)
+        
+        print("✅ FirestoreService: Successfully created and saved sticker metadata for \(stickerID.uuidString).")
+        
+        return foodItem
+    }
+    
+    /// Updates an existing sticker document with new data.
+    /// - Parameters:
+    ///   - sticker: The `FoodItem` containing the updated data.
+    ///   - userID: The ID of the currently authenticated user.
+    func updateSticker(_ sticker: FoodItem, for userID: String) async throws {
+        let stickerDocument = db.collection("users").document(userID).collection("stickers").document(sticker.id.uuidString)
+        
+        // This will merge the new data with the existing document,
+        // or create it if it doesn't exist (which shouldn't happen in this flow).
+        try await stickerDocument.setData([
+            "name": sticker.name as Any,
+            "funFact": sticker.funFact as Any,
+            "nutrition": sticker.nutrition as Any
+        ], merge: true)
+        
+        print("✅ FirestoreService: Successfully updated sticker \(sticker.id.uuidString) with analysis data.")
     }
     
     /// Loads all food stickers for a given user from Firestore.

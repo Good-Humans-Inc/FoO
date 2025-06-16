@@ -9,43 +9,15 @@ import UIKit
 struct FoodItem: Identifiable, Codable, Equatable, Hashable {
     let id: UUID
     let creationDate: Date
-    let imageData: Data
-    let thumbnailData: Data
+    
+    // The image data is no longer stored directly in the document.
+    // Instead, we store the URLs pointing to the images in Firebase Storage.
+    let imageURLString: String
+    let thumbnailURLString: String
     
     // Properties for food analysis data from the backend.
     // They are optional because they will be populated asynchronously.
     var name: String?
     var funFact: String?
     var nutrition: String?
-
-    // Computed property to easily get a UIImage from the stored data.
-    var image: UIImage? {
-        UIImage(data: imageData)
-    }
-    
-    // Computed property for the smaller thumbnail image.
-    var thumbnailImage: UIImage? {
-        UIImage(data: thumbnailData)
-    }
-
-    // A convenience initializer to create a FoodItem directly from a UIImage.
-    init(image: UIImage) {
-        self.id = UUID()
-        self.creationDate = Date()
-        
-        // We store the image as PNG data for persistence.
-        self.imageData = image.pngData() ?? Data()
-        print("==================================================")
-        print("STICKER SIZE LOG (PNG): \(self.imageData.count) bytes")
-        print("==================================================")
-        
-        // Create and store a smaller thumbnail for efficient loading in the jar.
-        let thumbnail = image.resized(toMaxSize: 150) // 150px is a good size for the jar
-        self.thumbnailData = thumbnail.pngData() ?? Data()
-        
-        // The analysis properties start as nil.
-        self.name = nil
-        self.funFact = nil
-        self.nutrition = nil
-    }
 }

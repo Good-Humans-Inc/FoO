@@ -16,6 +16,17 @@ class FoodAnalysisService {
         case noData
     }
     
+    /// Sends an image to the Cloud Function for analysis using modern async/await.
+    /// - Parameter image: The `UIImage` of the sticker to analyze.
+    /// - Returns: A `Result` containing either the decoded `FoodInfo` or an `AnalysisError`.
+    func analyzeFoodImage(_ image: UIImage) async -> Result<FoodInfo, AnalysisError> {
+        await withCheckedContinuation { continuation in
+            analyzeFoodImage(image) { result in
+                continuation.resume(returning: result)
+            }
+        }
+    }
+    
     /// Sends an image to the Cloud Function for analysis.
     /// - Parameters:
     ///   - image: The `UIImage` of the sticker to analyze.
