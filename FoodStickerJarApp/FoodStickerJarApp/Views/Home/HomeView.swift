@@ -6,13 +6,25 @@ struct HomeView: View {
     
     // Manages the presentation of the image picker and cropper.
     @State private var showImageProcessingSheet = false
-    // A flag to ensure we know when to commit a new sticker, avoiding race conditions.
-    @State private var isCreatingNewSticker = false
 
     /// A computed binding that serves as the single source of truth for presenting our cover.
     /// It prioritizes showing the `newSticker` if it exists, otherwise falls back to the `selectedFoodItem`.
     private var itemForCover: Binding<FoodItem?> {
-        $viewModel.newSticker.wrappedValue != nil ? $viewModel.newSticker : $viewModel.selectedFoodItem
+        Binding(
+            get: {
+                // The getter is simple: prioritize the new sticker, otherwise use the selected one.
+                viewModel.newSticker ?? viewModel.selectedFoodItem
+            },
+            set: { newValue in
+                // The setter correctly updates the underlying source of truth.
+                // When the cover is dismissed, SwiftUI sets this binding's value to nil.
+                if viewModel.newSticker != nil {
+                    viewModel.newSticker = newValue
+                } else {
+                    viewModel.selectedFoodItem = newValue
+                }
+            }
+        )
     }
     
     var body: some View {
@@ -94,18 +106,10 @@ struct HomeView: View {
             }
         }
         // MARK: - Sheet Modifiers
-        .sheet(isPresented: $showImageProcessingSheet, onDismiss: {
-            // This onDismiss is now only responsible for committing a *successful* sticker.
-            // The actual creation is handled below.
-            if isCreatingNewSticker {
-                viewModel.commitNewSticker()
-                isCreatingNewSticker = false // Reset the flag
-            }
-        }) {
+        .sheet(isPresented: $showImageProcessingSheet) {
             ImageProcessingView { stickerImage in
                 // The processing view is done. We have the image.
                 showImageProcessingSheet = false // Dismiss the sheet...
-                isCreatingNewSticker = true    // ...and set our flag.
                 
                 // Now, kick off the robust, parallel save and analysis process.
                 Task {
@@ -115,12 +119,13 @@ struct HomeView: View {
         }
         
         // A single, unified full-screen cover for presenting the detail view.
-        // This now correctly binds to newSticker from the ViewModel.
-        .fullScreenCover(item: $viewModel.newSticker, onDismiss: {
-            // After the cover is dismissed, we were successful, so commit the sticker.
-            viewModel.commitNewSticker()
+        .fullScreenCover(item: itemForCover, onDismiss: {
+            // After the cover is dismissed, ask the view model to commit the new
+            // sticker if one exists. This handles the drop-in-jar animation.
+            viewModel.commitNewStickerIfNecessary()
         }) { _ in
-            FoodDetailView(foodItem: $viewModel.newSticker)
+            // Pass the single source-of-truth binding to the detail view.
+            FoodDetailView(foodItem: itemForCover)
         }
         // An alert to show if the saving process fails.
         .alert("Failed to Save Sticker", isPresented: .constant(viewModel.stickerCreationError != nil)) {

@@ -165,26 +165,23 @@ class HomeViewModel: ObservableObject {
         }
     }
     
-    /// Commits the temporarily held new sticker to the main collection,
-    /// saves it, and adds it to the physics scene. This function is called
-    /// by the view when the detail sheet is dismissed.
-    func commitNewSticker() {
+    /// Checks if there's a pending new sticker and commits it to the main
+    /// collection and the physics scene. This is called after the detail
+    /// view for a new sticker is dismissed.
+    func commitNewStickerIfNecessary() {
         // Use the private, safe-guarded copy of the sticker.
+        // If this is nil, it means we weren't in a new-sticker flow, so we do nothing.
         guard let itemToAdd = stickerToCommit else {
-            print("HomeViewModel: CommitNewSticker failed, stickerToCommit was nil.")
             return
         }
         
         // 1. Add the sticker to the main data array.
         foodItems.append(itemToAdd)
         
-        // 2. The sticker is already saved to Firestore, so we just log it.
-        print("HomeViewModel: Committing pre-saved sticker \(itemToAdd.id.uuidString) to the UI.")
-        
-        // 3. Add the sticker to the physics scene, triggering the animation.
+        // 2. Add the sticker to the physics scene, triggering the animation.
         jarScene.addSticker(item: itemToAdd)
         
-        // 4. Clear the temporary item.
+        // 3. Clear the temporary item to signify the commit is complete.
         stickerToCommit = nil
     }
     

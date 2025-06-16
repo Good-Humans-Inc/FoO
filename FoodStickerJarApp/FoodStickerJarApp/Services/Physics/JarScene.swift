@@ -85,6 +85,12 @@ class JarScene: SKScene, SKPhysicsContactDelegate {
             if let nodeName = draggedNode.name, let itemID = UUID(uuidString: nodeName) {
                 onStickerTapped.send(itemID)
             }
+        } else {
+            // This was a drag. Check if the sticker is outside the jar.
+            if !self.frame.contains(draggedNode.position) {
+                // If outside, reset its position to the top to drop it back in.
+                draggedNode.position = CGPoint(x: self.frame.midX, y: self.frame.maxY)
+            }
         }
         
         // Re-enable physics and clean up.
