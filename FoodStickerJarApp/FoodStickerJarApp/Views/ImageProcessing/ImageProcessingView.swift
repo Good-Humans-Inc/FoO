@@ -17,7 +17,7 @@ struct ImageProcessingView: View {
     @State private var currentState: ProcessingState = .camera
     
     // The completion handler to call when a final sticker is created.
-    var onComplete: (UIImage) -> Void
+    var onComplete: (UIImage, UIImage) -> Void
     
     // Environment value to programmatically dismiss the sheet.
     @Environment(\.dismiss) var dismiss
@@ -35,12 +35,12 @@ struct ImageProcessingView: View {
             
         case .cropping(let image):
             // This view contains the VisionKit subject lifting logic.
-            SubjectLiftContainerView(image: image) { finalSticker in
+            SubjectLiftContainerView(image: image, onComplete: { finalSticker in
                 // When the user saves the sticker, call the completion handler.
-                onComplete(finalSticker)
+                onComplete(image, finalSticker)
                 // Mark the process as finished to trigger dismissal.
                 currentState = .finished
-            }
+            })
             .ignoresSafeArea()
             
         case .finished:

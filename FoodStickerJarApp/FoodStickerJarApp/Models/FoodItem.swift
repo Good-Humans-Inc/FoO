@@ -14,6 +14,7 @@ struct FoodItem: Identifiable, Codable, Equatable, Hashable {
     // Instead, we store the URLs pointing to the images in Firebase Storage.
     let imageURLString: String
     let thumbnailURLString: String
+    let originalImageURLString: String?
     
     // Properties for food analysis data from the backend.
     // They are optional because they will be populated asynchronously.
