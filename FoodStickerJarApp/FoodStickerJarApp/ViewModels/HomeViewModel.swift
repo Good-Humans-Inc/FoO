@@ -98,8 +98,9 @@ class HomeViewModel: ObservableObject {
     
     /// This function orchestrates the sticker creation process by running the
     /// image saving and analysis tasks in parallel for a faster user experience.
+    /// - Parameter originalImage: The original image taken by the camera.
     /// - Parameter stickerImage: The final `UIImage` of the sticker.
-    func processNewSticker(stickerImage: UIImage) async {
+    func processNewSticker(originalImage: UIImage, stickerImage: UIImage) async {
         // 1. Set state to show a loading UI.
         await MainActor.run {
             self.stickerCreationError = nil
@@ -115,7 +116,7 @@ class HomeViewModel: ObservableObject {
         }
         
         // 2. Launch saving and analysis tasks in parallel.
-        async let savingTask: FoodItem = firestoreService.createSticker(from: stickerImage, for: userId)
+        async let savingTask: FoodItem = firestoreService.createSticker(originalImage: originalImage, stickerImage: stickerImage, for: userId)
         async let analysisTask = analysisService.analyzeFoodImage(stickerImage)
 
         do {
@@ -140,7 +141,6 @@ class HomeViewModel: ObservableObject {
                 updatedItem.funFact = foodInfo.funFact
                 updatedItem.nutrition = foodInfo.nutrition
             case .failure(let error):
-                // If analysis fails, we still have a sticker. We'll mark it as such.
                 updatedItem.name = "Analysis Failed"
                 print("Food analysis failed: \(error)")
             }
@@ -148,10 +148,18 @@ class HomeViewModel: ObservableObject {
             // 6. Save the analysis data to Firestore.
             try await firestoreService.updateSticker(updatedItem, for: userId)
             
-            // 7. Update the local view model again so the UI reflects the final analysis data.
+            // 7. Update the local view model consistently.
             await MainActor.run {
-                self.newSticker = updatedItem
-                self.stickerToCommit = updatedItem
+                // If the detail view is still showing this sticker, update it.
+                if self.newSticker?.id == updatedItem.id {
+                    self.newSticker = updatedItem
+                }
+                
+                // If this sticker is the one pending commit, update the reference
+                // so the fully-analyzed version is what gets dropped in the jar.
+                if self.stickerToCommit?.id == updatedItem.id {
+                    self.stickerToCommit = updatedItem
+                }
             }
 
         } catch {

@@ -12,33 +12,41 @@ class FirestoreService {
     /// Creates a new food sticker by first uploading its images to Firebase Storage
     /// and then saving the resulting URL metadata to Firestore.
     /// - Parameters:
-    ///   - image: The sticker `UIImage` to be processed and saved.
+    ///   - originalImage: The original `UIImage` from the camera.
+    ///   - stickerImage: The sticker `UIImage` to be processed and saved.
     ///   - userID: The ID of the currently authenticated user.
     /// - Returns: The fully constructed `FoodItem` with URLs pointing to the stored images.
-    func createSticker(from image: UIImage, for userID: String) async throws -> FoodItem {
+    func createSticker(originalImage: UIImage, stickerImage: UIImage, for userID: String) async throws -> FoodItem {
         let stickerID = UUID()
         let creationDate = Date()
         
-        // Prepare image data.
-        guard let imageData = image.pngData() else {
+        // Prepare image data for sticker and thumbnail.
+        guard let stickerImageData = stickerImage.pngData() else {
             throw NSError(domain: "ImageError", code: 0, userInfo: [NSLocalizedDescriptionKey: "Failed to get PNG data from image."])
         }
         
-        let thumbnail = image.resized(toMaxSize: 150)
+        let thumbnail = stickerImage.resized(toMaxSize: 150)
         guard let thumbnailData = thumbnail.pngData() else {
             throw NSError(domain: "ImageError", code: 1, userInfo: [NSLocalizedDescriptionKey: "Failed to get PNG data from thumbnail."])
+        }
+        
+        // Prepare image data for original photo. Use JPEG for photos to save space.
+        guard let originalImageData = originalImage.jpegData(compressionQuality: 0.8) else {
+            throw NSError(domain: "ImageError", code: 2, userInfo: [NSLocalizedDescriptionKey: "Failed to get JPEG data from original image."])
         }
         
         // Define paths for Firebase Storage.
         let imagePath = "stickers/\(userID)/\(stickerID.uuidString).png"
         let thumbnailPath = "stickers/\(userID)/\(stickerID.uuidString)_thumb.png"
+        let originalPhotoPath = "originals/\(userID)/\(stickerID.uuidString).jpg"
         
-        // Upload both images concurrently.
-        async let imageURL = storageService.uploadImage(data: imageData, at: imagePath)
+        // Upload all three images concurrently.
+        async let imageURL = storageService.uploadImage(data: stickerImageData, at: imagePath)
         async let thumbnailURL = storageService.uploadImage(data: thumbnailData, at: thumbnailPath)
+        async let originalPhotoURL = storageService.uploadImage(data: originalImageData, at: originalPhotoPath)
         
         // Await the results.
-        let (finalImageURL, finalThumbnailURL) = try await (imageURL, thumbnailURL)
+        let (finalImageURL, finalThumbnailURL, finalOriginalPhotoURL) = try await (imageURL, thumbnailURL, originalPhotoURL)
         
         // Create the Firestore data object.
         let foodItem = FoodItem(
@@ -46,6 +54,7 @@ class FirestoreService {
             creationDate: creationDate,
             imageURLString: finalImageURL.absoluteString,
             thumbnailURLString: finalThumbnailURL.absoluteString,
+            originalImageURLString: finalOriginalPhotoURL.absoluteString,
             name: nil,
             funFact: nil,
             nutrition: nil

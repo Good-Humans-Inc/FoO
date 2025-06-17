@@ -107,13 +107,13 @@ struct HomeView: View {
         }
         // MARK: - Sheet Modifiers
         .sheet(isPresented: $showImageProcessingSheet) {
-            ImageProcessingView { stickerImage in
+            ImageProcessingView { originalImage, stickerImage in
                 // The processing view is done. We have the image.
                 showImageProcessingSheet = false // Dismiss the sheet...
                 
                 // Now, kick off the robust, parallel save and analysis process.
                 Task {
-                    await viewModel.processNewSticker(stickerImage: stickerImage)
+                    await viewModel.processNewSticker(originalImage: originalImage, stickerImage: stickerImage)
                 }
             }
         }
