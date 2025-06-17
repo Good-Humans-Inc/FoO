@@ -7,7 +7,6 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
-		2C3C4D2A2DFCBEDC005E2C14 /* GoogleService-Info.plist in Resources */ = {isa = PBXBuildFile; fileRef = 2C3C4D292DFCBEDC005E2C14 /* GoogleService-Info.plist */; };
 		2C3C4D2D2DFCBFEC005E2C14 /* FirebaseAI in Frameworks */ = {isa = PBXBuildFile; productRef = 2C3C4D2C2DFCBFEC005E2C14 /* FirebaseAI */; };
 		2C3C4D2F2DFCBFEC005E2C14 /* FirebaseAnalytics in Frameworks */ = {isa = PBXBuildFile; productRef = 2C3C4D2E2DFCBFEC005E2C14 /* FirebaseAnalytics */; };
 		2C3C4D312DFCBFEC005E2C14 /* FirebaseAnalyticsCore in Frameworks */ = {isa = PBXBuildFile; productRef = 2C3C4D302DFCBFEC005E2C14 /* FirebaseAnalyticsCore */; };
@@ -27,7 +26,6 @@
 
 /* Begin PBXFileReference section */
 		2C3C4B932DFB72F5005E2C14 /* FoodStickerJarApp.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = FoodStickerJarApp.app; sourceTree = BUILT_PRODUCTS_DIR; };
-		2C3C4D292DFCBEDC005E2C14 /* GoogleService-Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = "GoogleService-Info.plist"; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
@@ -69,7 +67,6 @@
 			children = (
 				2C3C4B952DFB72F5005E2C14 /* FoodStickerJarApp */,
 				2C3C4B942DFB72F5005E2C14 /* Products */,
-				2C3C4D292DFCBEDC005E2C14 /* GoogleService-Info.plist */,
 			);
 			sourceTree = "<group>";
 		};
@@ -164,7 +161,6 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				2C3C4D2A2DFCBEDC005E2C14 /* GoogleService-Info.plist in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
