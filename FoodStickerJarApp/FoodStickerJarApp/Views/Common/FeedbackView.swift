@@ -13,7 +13,7 @@ struct FeedbackView: View {
     var body: some View {
         HStack(spacing: 12) {
             // A text field styled to look like a modern chat input.
-            TextField("Type a message...", text: $feedbackMessage)
+            TextField("Confused? Tell me about it...", text: $feedbackMessage)
                 .textFieldStyle(.plain)
                 .padding(.horizontal, 16)
                 .padding(.vertical, 10)

@@ -173,6 +173,10 @@ class JarScene: SKScene, SKPhysicsContactDelegate {
         // Use the UUID as the node's name for identification on tap.
         node.name = id.uuidString
         
+        // Downsize the sticker slightly for a better fit in the jar.
+        let scale: CGFloat = 0.85
+        node.setScale(scale)
+        
         // Resize the sticker to a consistent *maximum* dimension, preserving its aspect ratio.
         let maxStickerDimension: CGFloat = 80.0
         let aspectRatio = image.size.width / image.size.height

@@ -28,33 +28,23 @@ struct HomeView: View {
     }
     
     var body: some View {
-        ZStack {
+        ZStack(alignment: .bottom) {
             // Background color matching the design.
             Color(red: 253/255, green: 249/255, blue: 240/255)
                 .ignoresSafeArea()
 
-            VStack(spacing: 12) {
+            // Main content VStack
+            VStack(spacing: 0) {
                 Spacer().frame(height: 20)
 
-                Text("Shake your phone!")
-                    .font(.system(size: 26, weight: .semibold))
-                    .foregroundColor(.black)
-                    .padding(.top)
-
                 GeometryReader { geo in
-                    // Make the jar visual fill the width of the screen for a larger appearance.
-                    let jarVisualWidth: CGFloat = geo.size.width
+                    let jarVisualWidth: CGFloat = geo.size.width * 0.9 // Make jar slightly smaller than screen width
                     let jarVisualHeight: CGFloat = jarVisualWidth * 1.35
                     
-                    // Adjust the physics world to fit snugly inside the new, larger jar image.
-                    // These values are fine-tuned to align with the transparent interior of the asset.
                     let spriteViewWidth = jarVisualWidth * 0.78
                     let spriteViewHeight = jarVisualHeight * 0.72
                     let spriteViewSize = CGSize(width: spriteViewWidth, height: spriteViewHeight)
 
-                    // This ZStack is now directly inside the GeometryReader.
-                    // It will center itself, and its size is determined by its content,
-                    // preventing it from blocking the button below.
                     ZStack {
                         Image("glassJar")
                             .resizable()
@@ -63,33 +53,29 @@ struct HomeView: View {
 
                         SpriteView(scene: viewModel.jarScene)
                             .frame(width: spriteViewSize.width, height: spriteViewSize.height)
-                            .offset(y: 15) // A slight vertical offset for perfect alignment.
+                            .offset(y: 15)
                     }
-                    // Place the frame modifier on the ZStack to center it.
                     .frame(width: geo.size.width, height: geo.size.height)
                     .onAppear {
-                        // Now that the view has appeared and has a size, set up the scene.
                         viewModel.setupScene(with: spriteViewSize)
                     }
                 }
-
-                Spacer()
-
-                Button(action: {
-                    // Trigger the image processing sheet.
-                    showImageProcessingSheet = true
-                }) {
-                    Text("Take Picture")
-                        .font(.system(size: 18, weight: .semibold))
-                        .padding()
-                        .frame(minWidth: 240)
-                        .background(Color(red: 236/255, green: 138/255, blue: 83/255))
-                        .foregroundColor(.white)
-                        .cornerRadius(14)
-                }
-                .padding(.bottom, 30)
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)
+            
+            // Floating Camera Button
+            Button(action: {
+                showImageProcessingSheet = true
+            }) {
+                Image(systemName: "camera.fill")
+                    .font(.system(size: 24, weight: .bold))
+                    .foregroundColor(.black.opacity(0.6))
+                    .padding(20)
+                    .background(.ultraThinMaterial)
+                    .clipShape(Circle())
+                    .shadow(radius: 5)
+            }
+            .padding(.bottom, 100) // Position it above the feedback bar area
             
             // This overlay will appear on top of the whole view when saving.
             if viewModel.isSavingSticker {
