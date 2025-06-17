@@ -174,7 +174,7 @@ class JarScene: SKScene, SKPhysicsContactDelegate {
         node.name = id.uuidString
         
         // Downsize the sticker slightly for a better fit in the jar.
-        let scale: CGFloat = 0.85
+        let scale: CGFloat = 0.9
         node.setScale(scale)
         
         // Resize the sticker to a consistent *maximum* dimension, preserving its aspect ratio.
@@ -207,13 +207,12 @@ class JarScene: SKScene, SKPhysicsContactDelegate {
         // Remove old walls before creating new ones.
         self.children.filter { $0.physicsBody?.categoryBitMask == PhysicsCategory.wall }.forEach { $0.removeFromParent() }
 
-        // --- FIX: Create a fully-enclosed, jar-shaped boundary ---
         let rect = self.frame
         
-        // Define dimensions for the custom jar shape to match the visual asset
+        // Define dimensions for the custom jar shape
         let bottomRadius: CGFloat = 60.0
         let topRadius: CGFloat = 30.0
-        let topOpeningWidthRatio: CGFloat = 0.85 // Mouth of jar is 85% of the total width
+        let topOpeningWidthRatio: CGFloat = 0.85
         let topShoulderXInset = (rect.width - (rect.width * topOpeningWidthRatio)) / 2
         
         let path = CGMutablePath()
@@ -221,28 +220,22 @@ class JarScene: SKScene, SKPhysicsContactDelegate {
         // Start from the bottom-left side
         path.move(to: CGPoint(x: rect.minX, y: rect.minY + bottomRadius))
         
-        // Rounded bottom corners and straight bottom line
+        // Add arcs and lines for the jar shape
         path.addArc(tangent1End: CGPoint(x: rect.minX, y: rect.minY), tangent2End: CGPoint(x: rect.minX + bottomRadius, y: rect.minY), radius: bottomRadius)
         path.addLine(to: CGPoint(x: rect.maxX - bottomRadius, y: rect.minY))
         path.addArc(tangent1End: CGPoint(x: rect.maxX, y: rect.minY), tangent2End: CGPoint(x: rect.maxX, y: rect.minY + bottomRadius), radius: bottomRadius)
-        
-        // Right wall
         path.addLine(to: CGPoint(x: rect.maxX, y: rect.maxY - topRadius))
-        
-        // Top-right "shoulder" of the jar
         path.addArc(tangent1End: CGPoint(x: rect.maxX, y: rect.maxY), tangent2End: CGPoint(x: rect.maxX - topShoulderXInset, y: rect.maxY), radius: topRadius)
-        
-        // Top opening
         path.addLine(to: CGPoint(x: rect.minX + topShoulderXInset, y: rect.maxY))
-        
-        // Top-left "shoulder" of the jar
         path.addArc(tangent1End: CGPoint(x: rect.minX, y: rect.maxY), tangent2End: CGPoint(x: rect.minX, y: rect.maxY - topRadius), radius: topRadius)
-
-        // Close the path to form a complete loop (connects back to the starting point via the left wall).
         path.closeSubpath()
 
+        // Create a transformation to move the entire path up by 20 points.
+        // var transform = CGAffineTransform(translationX: 0, y: 40)
+        // let shiftedPath = path.copy(using: &transform)!
+        
         let boundaryNode = SKNode()
-        // Use edgeLoopFrom, which is perfect for a closed container.
+        //boundaryNode.physicsBody = SKPhysicsBody(edgeLoopFrom: shiftedPath)
         boundaryNode.physicsBody = SKPhysicsBody(edgeLoopFrom: path)
         boundaryNode.physicsBody?.categoryBitMask = PhysicsCategory.wall
         boundaryNode.physicsBody?.friction = 0.0

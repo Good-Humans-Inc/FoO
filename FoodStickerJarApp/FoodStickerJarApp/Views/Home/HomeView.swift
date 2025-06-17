@@ -35,11 +35,28 @@ struct HomeView: View {
 
             // Main content VStack
             VStack(spacing: 0) {
-                Spacer().frame(height: 20)
+                // Top placeholder button
+                HStack {
+                    Spacer()
+                    Button(action: {
+                        // Placeholder action for the top button
+                        print("Top button tapped!")
+                    }) {
+                        Image(systemName: "arrow.up")
+                            .font(.system(size: 20, weight: .bold))
+                            .foregroundColor(.black.opacity(0.4))
+                            .padding()
+                            .background(.ultraThinMaterial)
+                            .clipShape(Circle())
+                    }
+                    Spacer()
+                }
+                .padding(.top, 5) // Give it a little space from the top edge
 
                 GeometryReader { geo in
-                    let jarVisualWidth: CGFloat = geo.size.width * 0.9 // Make jar slightly smaller than screen width
-                    let jarVisualHeight: CGFloat = jarVisualWidth * 1.35
+                    let jarVisualWidth: CGFloat = geo.size.width
+                    // Make the jar taller by adjusting the aspect ratio multiplier
+                    let jarVisualHeight: CGFloat = jarVisualWidth * 1.8
                     
                     let spriteViewWidth = jarVisualWidth * 0.78
                     let spriteViewHeight = jarVisualHeight * 0.72
@@ -53,9 +70,10 @@ struct HomeView: View {
 
                         SpriteView(scene: viewModel.jarScene)
                             .frame(width: spriteViewSize.width, height: spriteViewSize.height)
-                            .offset(y: 15)
+                            .offset(y: 1)
                     }
                     .frame(width: geo.size.width, height: geo.size.height)
+                    .offset(y: -40) // Move the entire jar container up
                     .onAppear {
                         viewModel.setupScene(with: spriteViewSize)
                     }

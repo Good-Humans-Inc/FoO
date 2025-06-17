@@ -47,13 +47,18 @@ class AppDelegate: NSObject, UIApplicationDelegate {
     @objc private func keyboardWillShow(notification: NSNotification) {
         guard let userInfo = notification.userInfo,
               let keyboardFrame = userInfo[UIResponder.keyboardFrameEndUserInfoKey] as? CGRect,
-              let duration = userInfo[UIResponder.keyboardAnimationDurationUserInfoKey] as? TimeInterval else { return }
+              let duration = userInfo[UIResponder.keyboardAnimationDurationUserInfoKey] as? TimeInterval,
+              let window = self.feedbackHostingController?.view.window else { return }
         
+        // Calculate the keyboard's height excluding the bottom safe area.
         let keyboardHeight = keyboardFrame.height
-        feedbackViewBottomConstraint?.constant = -keyboardHeight
+        let bottomSafeArea = window.safeAreaInsets.bottom
+        
+        // Adjust the constraint to move the view right on top of the keyboard, removing any gap.
+        feedbackViewBottomConstraint?.constant = -(keyboardHeight - bottomSafeArea)
         
         UIView.animate(withDuration: duration) {
-            self.feedbackHostingController?.view.superview?.layoutIfNeeded()
+            window.layoutIfNeeded()
         }
     }
     
@@ -62,10 +67,10 @@ class AppDelegate: NSObject, UIApplicationDelegate {
         guard let userInfo = notification.userInfo,
               let duration = userInfo[UIResponder.keyboardAnimationDurationUserInfoKey] as? TimeInterval else { return }
         
-        feedbackViewBottomConstraint?.constant = -10 // Back to original position
+        feedbackViewBottomConstraint?.constant = -10 // Back to original safe area padding
         
         UIView.animate(withDuration: duration) {
-            self.feedbackHostingController?.view.superview?.layoutIfNeeded()
+            self.feedbackHostingController?.view.window?.layoutIfNeeded()
         }
     }
     
