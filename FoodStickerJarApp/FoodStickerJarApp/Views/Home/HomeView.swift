@@ -98,7 +98,7 @@ struct HomeView: View {
                     .overlay {
                         VStack {
                             ProgressView()
-                            Text("Preparing Sticker...")
+                            Text("( ˘▽˘)っ Making your sticker...")
                                 .font(.title2)
                                 .foregroundColor(.white)
                         }

@@ -18,6 +18,7 @@ struct FoodItem: Identifiable, Codable, Equatable, Hashable {
     
     // Properties for food analysis data from the backend.
     // They are optional because they will be populated asynchronously.
+    var isFood: Bool?
     var name: String?
     var funFact: String?
     var nutrition: String?

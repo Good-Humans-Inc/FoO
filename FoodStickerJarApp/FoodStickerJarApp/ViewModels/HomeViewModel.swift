@@ -137,10 +137,12 @@ class HomeViewModel: ObservableObject {
             
             switch analysisResult {
             case .success(let foodInfo):
+                updatedItem.isFood = foodInfo.isFood
                 updatedItem.name = foodInfo.name
                 updatedItem.funFact = foodInfo.funFact
                 updatedItem.nutrition = foodInfo.nutrition
             case .failure(let error):
+                updatedItem.isFood = false // If analysis fails, assume it's not food.
                 updatedItem.name = "Analysis Failed"
                 print("Food analysis failed: \(error)")
             }
