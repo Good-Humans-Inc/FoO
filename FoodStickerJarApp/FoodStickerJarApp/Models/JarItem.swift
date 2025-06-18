@@ -7,7 +7,7 @@ struct JarItem: Codable, Identifiable {
     let userID: String
     let timestamp: Timestamp
     let screenshotThumbnailURL: String
-    let stickerIDs: [String]
+    let stickers: [FoodItem]
     // Optional report for the jar
     let report: String?
 } 

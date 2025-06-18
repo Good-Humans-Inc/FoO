@@ -238,9 +238,8 @@ class HomeViewModel: ObservableObject {
             let imagePath = "jar_thumbnails/\(userId)/\(UUID().uuidString).png"
             let imageURL = try await storageService.uploadImage(data: imageData, at: imagePath)
             
-            let stickerIDs = foodItems.map { $0.id.uuidString }
-            
-            _ = try await firestoreService.archiveJar(stickerIDs: stickerIDs, screenshotURL: imageURL.absoluteString, for: userId)
+            // Pass the whole foodItems array to the service.
+            _ = try await firestoreService.archiveJar(stickers: foodItems, screenshotURL: imageURL.absoluteString, for: userId)
             
             // Clear the jar
             foodItems.removeAll()

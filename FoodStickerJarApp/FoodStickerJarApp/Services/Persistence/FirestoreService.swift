@@ -93,6 +93,8 @@ class FirestoreService {
     func loadStickers(for userID: String) async throws -> [FoodItem] {
         print("FirestoreService: Preparing to load stickers for user ID: \(userID)")
         
+        // With the new architecture, we no longer need to filter.
+        // This collection will only contain active stickers.
         let stickerCollection = db.collection("users").document(userID).collection("stickers")
         
         do {
@@ -152,12 +154,14 @@ class FirestoreService {
     
     /// Archives a collection of stickers as a new jar in Firestore.
     /// This function uses a batched write to ensure atomicity.
+    /// It creates the new jar with embedded sticker data, deletes the original stickers,
+    /// and updates the user's list of jar IDs all at once.
     /// - Parameters:
-    ///   - stickerIDs: An array of sticker IDs to be included in the jar.
+    ///   - stickers: An array of `FoodItem` objects to be archived.
     ///   - screenshotURL: The URL of the jar's screenshot thumbnail.
     ///   - userID: The ID of the user archiving the jar.
     /// - Returns: The newly created `JarItem`.
-    func archiveJar(stickerIDs: [String], screenshotURL: String, for userID: String) async throws -> JarItem {
+    func archiveJar(stickers: [FoodItem], screenshotURL: String, for userID: String) async throws -> JarItem {
         let newJarRef = db.collection("jars").document()
         let userRef = db.collection("users").document(userID)
         
@@ -166,18 +170,22 @@ class FirestoreService {
             userID: userID,
             timestamp: Timestamp(date: Date()),
             screenshotThumbnailURL: screenshotURL,
-            stickerIDs: stickerIDs,
+            stickers: stickers,
             report: nil // Report can be added later if needed
         )
         
         let batch = db.batch()
         
-        // 1. Create the new jar document
+        // 1. Create the new jar document with all sticker data embedded.
         try batch.setData(from: newJarItem, forDocument: newJarRef)
         
-        // 2. Atomically add the new jar's ID to the user's list of jarIDs.
-        // By using setData with merge: true, we create the user document if it's missing,
-        // or update it if it exists. This is more robust than updateData.
+        // 2. Delete each of the original stickers from the user's sticker collection.
+        for sticker in stickers {
+            let stickerRef = db.collection("users").document(userID).collection("stickers").document(sticker.id.uuidString)
+            batch.deleteDocument(stickerRef)
+        }
+        
+        // 3. Atomically add the new jar's ID to the user's list of jarIDs.
         batch.setData([
             "jarIDs": FieldValue.arrayUnion([newJarRef.documentID])
         ], forDocument: userRef, merge: true)

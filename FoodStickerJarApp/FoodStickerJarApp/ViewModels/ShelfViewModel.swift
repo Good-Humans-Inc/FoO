@@ -11,6 +11,7 @@ class ShelfViewModel: ObservableObject {
     
     private let firestoreService = FirestoreService()
     private let authService = AuthenticationService()
+    private let feedbackService = FeedbackService()
     private var cancellables = Set<AnyCancellable>()
     
     init() {
@@ -39,5 +40,12 @@ class ShelfViewModel: ObservableObject {
                 print("Error fetching jars: \(error)")
             }
         }
+    }
+    
+    func submitFeedback(_ message: String) {
+        guard !message.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
+            return
+        }
+        feedbackService.submitFeedback(message: message)
     }
 } 
