@@ -7,7 +7,14 @@ import Kingfisher
 struct FoodDetailView: View {
     @Binding var foodItem: FoodItem?
     
+    // The generated sticker image, passed in for the hero animation.
+    var stickerImage: UIImage?
+    // The namespace for the hero animation. Made optional for reuse.
+    var namespace: Namespace.ID?
+    
     @Environment(\.dismiss) var dismiss
+    
+    @State private var showContent = false
     
     // A static, efficient array of messages for unidentifiable items.
     private static let unidentifiableMessages = [
@@ -59,7 +66,14 @@ struct FoodDetailView: View {
                     VStack {
                         // Sticker Image
                         Group {
-                            if let imageURL = URL(string: foodItem.imageURLString) {
+                            if let stickerImage = stickerImage {
+                                // If a local UIImage is passed, use it directly for the transition.
+                                Image(uiImage: stickerImage)
+                                    .resizable()
+                                    .aspectRatio(contentMode: .fit)
+                                    .matchedGeometryEffect(id: "sticker", in: namespace!)
+                                
+                            } else if let imageURL = URL(string: foodItem.imageURLString) {
                                 KFImage(imageURL)
                                     .resizable()
                                     .placeholder {
@@ -68,6 +82,9 @@ struct FoodDetailView: View {
                                             .resizable()
                                             .foregroundColor(.gray)
                                             .aspectRatio(contentMode: .fit)
+                                    }
+                                    .if(namespace != nil) { view in
+                                        view.matchedGeometryEffect(id: "sticker", in: namespace!)
                                     }
                             } else {
                                 // Show a placeholder if the image data is invalid
@@ -118,7 +135,7 @@ struct FoodDetailView: View {
                             } else if foodItem.isFood == false {
                                 // Case: Not a food item (or unidentifiable).
                                 Text(randomNotFoodMessage)
-                                    .font(.body)
+                                    .font(.custom("Georgia", size: 17))
                                     .foregroundColor(.secondary)
                                     .multilineTextAlignment(.center)
                                     .padding(.top)
@@ -130,10 +147,24 @@ struct FoodDetailView: View {
                         }
                         .padding(.horizontal, 30)
                         .padding(.bottom) // Add some space at the very end of the scrollable content
+                        .opacity(showContent ? 1 : 0)
+                        .animation(.easeIn(duration: 0.3).delay(0.5), value: showContent)
                     }
                 }
             }
             .background(Color(.systemGray6).ignoresSafeArea())
+            .onAppear {
+                // If this view is part of a hero transition, delay the content appearance.
+                if namespace != nil {
+                    // This delay allows the matchedGeometryEffect to complete.
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.6) {
+                        showContent = true
+                    }
+                } else {
+                    // If it's just being presented normally, show content immediately.
+                    showContent = true
+                }
+            }
         } else {
             // This ProgressView is shown if the item becomes nil, preventing the crash.
             ProgressView()
@@ -152,8 +183,20 @@ private struct InfoRow: View {
                 .font(.headline)
                 .foregroundColor(.secondary)
             Text(content)
-                .font(.body)
+                .font(.custom("Georgia", size: 17))
                 .foregroundColor(.primary)
+        }
+    }
+}
+
+// Helper to conditionally apply a modifier
+extension View {
+    @ViewBuilder
+    func `if`<Content: View>(_ condition: Bool, transform: (Self) -> Content) -> some View {
+        if condition {
+            transform(self)
+        } else {
+            self
         }
     }
 } 

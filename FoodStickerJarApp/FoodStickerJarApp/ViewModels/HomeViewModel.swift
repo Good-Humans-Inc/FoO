@@ -102,15 +102,16 @@ class HomeViewModel: ObservableObject {
     /// - Parameter stickerImage: The final `UIImage` of the sticker.
     func processNewSticker(originalImage: UIImage, stickerImage: UIImage) async {
         // 1. Set state to show a loading UI.
+        print("[HomeViewModel] Starting processNewSticker.")
         await MainActor.run {
             self.stickerCreationError = nil
-            self.isSavingSticker = true
+            // self.isSavingSticker = true // This is now handled by the animation view.
         }
 
         guard let userId = self.userId else {
             await MainActor.run {
                 self.stickerCreationError = "User not authenticated. Cannot save sticker."
-                self.isSavingSticker = false
+                // self.isSavingSticker = false
             }
             return
         }
@@ -125,9 +126,10 @@ class HomeViewModel: ObservableObject {
 
             // 4. As soon as we have the new item, show the UI. The loading indicator will hide.
             await MainActor.run {
+                print("[HomeViewModel] Sticker saved, new FoodItem created with ID: \(newItem.id). Updating UI.")
                 self.newSticker = newItem
                 self.stickerToCommit = newItem // Prepare for commit
-                self.isSavingSticker = false // Hide loading overlay
+                // self.isSavingSticker = false // Hide loading overlay
             }
 
             // 5. Now, await the ANALYSIS task.
@@ -144,10 +146,11 @@ class HomeViewModel: ObservableObject {
             case .failure(let error):
                 updatedItem.isFood = false // If analysis fails, assume it's not food.
                 updatedItem.name = "Analysis Failed"
-                print("Food analysis failed: \(error)")
+                print("[HomeViewModel] Food analysis failed: \(error)")
             }
 
             // 6. Save the analysis data to Firestore.
+            print("[HomeViewModel] Saving analysis data to Firestore...")
             try await firestoreService.updateSticker(updatedItem, for: userId)
             
             // 7. Update the local view model consistently.
@@ -170,7 +173,7 @@ class HomeViewModel: ObservableObject {
                 print("❌ HomeViewModel: Failed to create and save sticker.")
                 print("   - Error: \(error.localizedDescription)")
                 self.stickerCreationError = error.localizedDescription
-                self.isSavingSticker = false
+                // self.isSavingSticker = false
             }
         }
     }
@@ -182,9 +185,11 @@ class HomeViewModel: ObservableObject {
         // Use the private, safe-guarded copy of the sticker.
         // If this is nil, it means we weren't in a new-sticker flow, so we do nothing.
         guard let itemToAdd = stickerToCommit else {
+            print("[HomeViewModel] commitNewStickerIfNecessary called, but no sticker to commit.")
             return
         }
         
+        print("[HomeViewModel] Committing sticker ID \(itemToAdd.id) to the jar.")
         // 1. Add the sticker to the main data array.
         foodItems.append(itemToAdd)
         
@@ -192,6 +197,7 @@ class HomeViewModel: ObservableObject {
         jarScene.addSticker(item: itemToAdd)
         
         // 3. Clear the temporary item to signify the commit is complete.
+        print("[HomeViewModel] Sticker committed. Clearing temporary item.")
         stickerToCommit = nil
     }
     

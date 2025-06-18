@@ -13,16 +13,12 @@ struct HomeView: View {
         Binding(
             get: {
                 // The getter is simple: prioritize the new sticker, otherwise use the selected one.
-                viewModel.newSticker ?? viewModel.selectedFoodItem
+                viewModel.selectedFoodItem
             },
             set: { newValue in
                 // The setter correctly updates the underlying source of truth.
                 // When the cover is dismissed, SwiftUI sets this binding's value to nil.
-                if viewModel.newSticker != nil {
-                    viewModel.newSticker = newValue
-                } else {
-                    viewModel.selectedFoodItem = newValue
-                }
+                viewModel.selectedFoodItem = newValue
             }
         )
     }
@@ -80,7 +76,7 @@ struct HomeView: View {
                     showImageProcessingSheet = true
                 }) {
                     Text("Take Picture")
-                        .font(.system(size: 18, weight: .semibold))
+                        .font(.custom("Georgia-Bold", size: 18))
                         .padding()
                         .frame(minWidth: 240)
                         .background(Color(red: 236/255, green: 138/255, blue: 83/255))
@@ -91,7 +87,8 @@ struct HomeView: View {
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)
             
-            // This overlay will appear on top of the whole view when saving.
+            // This overlay has been replaced by the new StickerCreationView animation.
+            /*
             if viewModel.isSavingSticker {
                 Color.black.opacity(0.5)
                     .ignoresSafeArea()
@@ -104,28 +101,23 @@ struct HomeView: View {
                         }
                     }
             }
+            */
         }
         // MARK: - Sheet Modifiers
-        .sheet(isPresented: $showImageProcessingSheet) {
-            ImageProcessingView { originalImage, stickerImage in
-                // The processing view is done. We have the image.
-                showImageProcessingSheet = false // Dismiss the sheet...
-                
-                // Now, kick off the robust, parallel save and analysis process.
-                Task {
-                    await viewModel.processNewSticker(originalImage: originalImage, stickerImage: stickerImage)
-                }
-            }
+        .sheet(isPresented: $showImageProcessingSheet, onDismiss: {
+            // After the entire sticker creation flow is dismissed, commit the new sticker.
+            print("[HomeView] Sheet dismissed. Committing sticker if necessary.")
+            viewModel.commitNewStickerIfNecessary()
+        }) {
+            ImageProcessingView()
+                .environmentObject(viewModel)
         }
         
-        // A single, unified full-screen cover for presenting the detail view.
-        .fullScreenCover(item: itemForCover, onDismiss: {
-            // After the cover is dismissed, ask the view model to commit the new
-            // sticker if one exists. This handles the drop-in-jar animation.
-            viewModel.commitNewStickerIfNecessary()
-        }) { _ in
+        // A single, unified full-screen cover for presenting the detail view for EXISTING stickers.
+        // The new sticker presentation is now handled by the StickerCreationView flow.
+        .fullScreenCover(item: $viewModel.selectedFoodItem) { _ in
             // Pass the single source-of-truth binding to the detail view.
-            FoodDetailView(foodItem: itemForCover)
+            FoodDetailView(foodItem: $viewModel.selectedFoodItem)
         }
         // An alert to show if the saving process fails.
         .alert("Failed to Save Sticker", isPresented: .constant(viewModel.stickerCreationError != nil)) {
