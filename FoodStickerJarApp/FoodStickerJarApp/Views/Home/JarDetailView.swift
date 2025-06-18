@@ -25,5 +25,12 @@ struct JarDetailView: View {
         }
         .navigationTitle(jar.timestamp.dateValue().formatted(date: .abbreviated, time: .omitted))
         .navigationBarTitleDisplayMode(.inline)
+        .fullScreenCover(item: $viewModel.selectedFoodItem) { foodItem in
+            let binding = Binding<FoodItem?>(
+                get: { viewModel.selectedFoodItem },
+                set: { viewModel.selectedFoodItem = $0 }
+            )
+            FoodDetailView(foodItem: binding)
+        }
     }
 } 

@@ -145,9 +145,8 @@ struct HomeView: View {
                         let snapshotView = JarContainerView(jarScene: viewModel.jarScene, size: jarViewSize)
                             .frame(width: jarViewSize.width, height: jarViewSize.height)
                             .offset(y: -40)
-                            .background(Color(red: 253/255, green: 249/255, blue: 240/255))
                         
-                        if let image = snapshotView.snapshot() {
+                        if let image = snapshotView.snapshot()?.croppedToOpaque() {
                             Task {
                                 await viewModel.archiveJar(with: image)
                             }
@@ -164,9 +163,10 @@ struct HomeView: View {
                         Button(action: {
                             showImageProcessingSheet = true
                         }) {
-                            Image(systemName: "camera.fill")
-                                .font(.system(size: 24, weight: .bold))
-                                .foregroundColor(.black.opacity(0.6))
+                            Image("cameraIcon")
+                                .resizable()
+                                .scaledToFit()
+                                .frame(width: 65, height: 64)
                                 .padding(20)
                                 .background(.ultraThinMaterial)
                                 .clipShape(Circle())
