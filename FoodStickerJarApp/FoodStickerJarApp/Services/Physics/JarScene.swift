@@ -121,6 +121,12 @@ class JarScene: SKScene, SKPhysicsContactDelegate {
     
     // MARK: - Public Methods
     
+    /// Removes all sticker nodes from the scene.
+    func clear() {
+        // Find all nodes that are stickers and remove them from the scene.
+        self.children.filter { $0.physicsBody?.categoryBitMask == PhysicsCategory.sticker }.forEach { $0.removeFromParent() }
+    }
+    
     /// Populates the jar with an initial set of stickers when the app loads.
     func populateJar(with items: [FoodItem]) {
         // Clear existing stickers before adding new ones.

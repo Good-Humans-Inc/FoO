@@ -10,6 +10,7 @@ struct HomeView: View {
     // State for the new UI
     @State private var showFeedbackInput = false
     @State private var feedbackText = ""
+    @State private var jarViewSize: CGSize = .zero
     
     /// A computed binding that serves as the single source of truth for presenting our cover.
     /// It prioritizes showing the `newSticker` if it exists, otherwise falls back to the `selectedFoodItem`.
@@ -102,6 +103,16 @@ struct HomeView: View {
                         Spacer()
                         
                         if !showFeedbackInput {
+                            // Archive button
+                            Button(action: {
+                                viewModel.initiateArchiving()
+                            }) {
+                                Image(systemName: "archivebox.fill")
+                                    .font(.system(size: 28, weight: .bold))
+                                    .foregroundColor(Color(red: 236/255, green: 138/255, blue: 83/255))
+                            }
+                            .padding(.trailing, 10)
+                            
                             NavigationLink(destination: ShelfView()) {
                                 Image("shelfIcon") // Make sure this asset exists
                                     .resizable()
@@ -116,29 +127,32 @@ struct HomeView: View {
                     .frame(height: 90) // Give the top bar a fixed height
                     
                     GeometryReader { geo in
-                        let jarVisualWidth: CGFloat = geo.size.width
-                        // Make the jar taller by adjusting the aspect ratio multiplier
-                        let jarVisualHeight: CGFloat = jarVisualWidth * 1.8
+                        JarContainerView(jarScene: viewModel.jarScene, size: geo.size)
+                            .frame(width: geo.size.width, height: geo.size.height)
+                            .offset(y: -40) // Move the entire jar container up
+                            .onAppear {
+                                self.jarViewSize = geo.size
+                                let spriteViewSize = CGSize(width: geo.size.width * 0.78, height: geo.size.width * 1.8 * 0.72)
+                                viewModel.setupScene(with: spriteViewSize)
+                            }
+                            .onChange(of: geo.size) { newSize in
+                                self.jarViewSize = newSize
+                            }
+                    }
+                }
+                .onChange(of: viewModel.triggerSnapshot) { shouldSnapshot in
+                    if shouldSnapshot {
+                        let snapshotView = JarContainerView(jarScene: viewModel.jarScene, size: jarViewSize)
+                            .frame(width: jarViewSize.width, height: jarViewSize.height)
+                            .offset(y: -40)
+                            .background(Color(red: 253/255, green: 249/255, blue: 240/255))
                         
-                        let spriteViewWidth = jarVisualWidth * 0.78
-                        let spriteViewHeight = jarVisualHeight * 0.72
-                        let spriteViewSize = CGSize(width: spriteViewWidth, height: spriteViewHeight)
-
-                        ZStack {
-                            Image("glassJar")
-                                .resizable()
-                                .aspectRatio(contentMode: .fit)
-                                .frame(width: jarVisualWidth, height: jarVisualHeight)
-
-                            SpriteView(scene: viewModel.jarScene)
-                                .frame(width: spriteViewSize.width, height: spriteViewSize.height)
-                                .offset(y: 1)
+                        if let image = snapshotView.snapshot() {
+                            Task {
+                                await viewModel.archiveJar(with: image)
+                            }
                         }
-                        .frame(width: geo.size.width, height: geo.size.height)
-                        .offset(y: -40) // Move the entire jar container up
-                        .onAppear {
-                            viewModel.setupScene(with: spriteViewSize)
-                        }
+                        viewModel.triggerSnapshot = false
                     }
                 }
                 
@@ -171,6 +185,19 @@ struct HomeView: View {
                             VStack {
                                 ProgressView()
                                 Text("Preparing Sticker...")
+                                    .font(.title2)
+                                    .foregroundColor(.white)
+                            }
+                        }
+                }
+
+                if viewModel.showArchiveInProgress {
+                    Color.black.opacity(0.5)
+                        .ignoresSafeArea()
+                        .overlay {
+                            VStack {
+                                ProgressView()
+                                Text("Archiving Jar...")
                                     .font(.title2)
                                     .foregroundColor(.white)
                             }

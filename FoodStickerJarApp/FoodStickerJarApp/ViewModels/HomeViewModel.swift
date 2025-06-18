@@ -27,6 +27,8 @@ class HomeViewModel: ObservableObject {
     // State properties for managing the sticker creation UI flow.
     @Published var isSavingSticker = false
     @Published var stickerCreationError: String?
+    @Published var showArchiveInProgress = false
+    @Published var triggerSnapshot = false
     
     // MARK: - Services and Engine
     
@@ -40,6 +42,8 @@ class HomeViewModel: ObservableObject {
     private let analysisService = FoodAnalysisService()
     // The service for handling user feedback.
     private let feedbackService = FeedbackService()
+    // The service for uploading files.
+    private let storageService = FirebaseStorageService()
     
     // Used to receive notifications from the JarScene when a sticker is tapped.
     private var cancellables = Set<AnyCancellable>()
@@ -205,6 +209,55 @@ class HomeViewModel: ObservableObject {
         }
         
         feedbackService.submitFeedback(message: message)
+    }
+    
+    // MARK: - Archiving
+    
+    func archiveJar(with image: UIImage) async {
+        showArchiveInProgress = true
+        
+        guard let userId = self.userId else {
+            print("Error: User not authenticated.")
+            showArchiveInProgress = false
+            return
+        }
+        
+        guard !foodItems.isEmpty else {
+            print("Jar is empty, nothing to archive.")
+            showArchiveInProgress = false
+            return
+        }
+        
+        guard let imageData = image.pngData() else {
+            print("Error: Could not convert image to PNG data.")
+            showArchiveInProgress = false
+            return
+        }
+        
+        do {
+            let imagePath = "jar_thumbnails/\(userId)/\(UUID().uuidString).png"
+            let imageURL = try await storageService.uploadImage(data: imageData, at: imagePath)
+            
+            let stickerIDs = foodItems.map { $0.id.uuidString }
+            
+            _ = try await firestoreService.archiveJar(stickerIDs: stickerIDs, screenshotURL: imageURL.absoluteString, for: userId)
+            
+            // Clear the jar
+            foodItems.removeAll()
+            jarScene.clear()
+            
+            print("Successfully archived jar.")
+            
+        } catch {
+            print("Error archiving jar: \(error.localizedDescription)")
+            // Optionally, show an error to the user
+        }
+        
+        showArchiveInProgress = false
+    }
+    
+    func initiateArchiving() {
+        triggerSnapshot = true
     }
     
     // MARK: - Private Methods
