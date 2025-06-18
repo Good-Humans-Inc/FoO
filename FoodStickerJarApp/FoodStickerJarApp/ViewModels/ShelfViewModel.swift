@@ -31,8 +31,18 @@ class ShelfViewModel: ObservableObject {
         Task {
             do {
                 let user = try await firestoreService.fetchUser(with: userID)
-                let jarItems = try await firestoreService.fetchJars(with: user.jarIDs)
-                self.jars = jarItems
+                let jars = try await firestoreService.fetchJars(with: user.jarIDs)
+                
+                let jarDict: [String: JarItem] = Dictionary(uniqueKeysWithValues: jars.compactMap { jar in
+                    guard let id = jar.id else { return nil }
+                    return (id, jar)
+                })
+                
+                let sortedJars = user.jarIDs.compactMap { jarID in
+                    jarDict[jarID]
+                }
+                
+                self.jars = sortedJars
                 self.isLoading = false
             } catch {
                 self.isLoading = false

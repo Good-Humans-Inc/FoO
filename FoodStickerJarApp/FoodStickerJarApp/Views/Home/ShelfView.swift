@@ -9,37 +9,26 @@ struct ShelfView: View {
     @State private var showFeedbackInput = false
     @State private var feedbackText = ""
     
-    // Total number of slots for jars (3 shelves * 3 jars per shelf)
-    private let totalSlots = 9
+    // We no longer need a fixed total number of slots.
     
-    // Prepares the jars for display. We need to create a full grid of 9,
-    // with empty placeholders for jars that don't exist yet.
-    private var jarGrid: [JarItem?] {
-        let jars = viewModel.jars
-        var grid = [JarItem?](repeating: nil, count: totalSlots)
-        
-        let numCols = 3
-        let numRows = 3
-
-        // Populate the grid from the bottom-left up.
-        for (index, jar) in jars.enumerated() {
-            if index < totalSlots {
-                // Formula to map a linear index to a grid filled from bottom-to-top.
-                let row = numRows - 1 - (index / numCols)
-                let col = index % numCols
-                let gridIndex = row * numCols + col
-                
-                if gridIndex >= 0 && gridIndex < totalSlots {
-                    grid[gridIndex] = jar
-                }
-            }
-        }
-        return grid
-    }
-    
-    // Chunk the 1D grid into a 2D array of rows for the UI.
+    // Prepares the jars for display by chunking them into rows of 3.
+    // The last row will be padded with `nil` to ensure the layout is always full.
     private var jarRows: [[JarItem?]] {
-        jarGrid.chunked(into: 3)
+        let jars = viewModel.jars.map { $0 as JarItem? }
+        let chunkedJars = jars.chunked(into: 3)
+        
+        // If the last row is not full, pad it with nil values.
+        guard var lastRow = chunkedJars.last else { return chunkedJars }
+        
+        let paddingNeeded = 3 - lastRow.count
+        if paddingNeeded > 0 {
+            lastRow.append(contentsOf: repeatElement(nil, count: paddingNeeded))
+        }
+        
+        var finalRows = Array(chunkedJars.dropLast())
+        finalRows.append(lastRow)
+        
+        return finalRows
     }
 
     var body: some View {
@@ -88,12 +77,28 @@ struct ShelfView: View {
                 // MARK: - Jars on Shelves
                 if viewModel.isLoading {
                     ProgressView("Loading Shelf...")
+                        .frame(maxHeight: .infinity)
+                } else if viewModel.jars.isEmpty {
+                    // Special view for when there are no jars yet.
+                    VStack {
+                        Spacer()
+                        Text("Your shelf is empty.")
+                            .font(.title2)
+                            .foregroundColor(.secondary)
+                        Text("Archive a jar to see it here!")
+                            .font(.body)
+                            .foregroundColor(.secondary)
+                        Spacer()
+                    }
                 } else {
-                    // Always render 3 shelves.
-                    // The rows are ordered top to bottom.
-                    ForEach(0..<jarRows.count, id: \.self) { rowIndex in
-                        let row = jarRows[rowIndex]
-                        ShelfRowView(row: row, userID: viewModel.userID)
+                    ScrollView {
+                        VStack(spacing: 20) {
+                            ForEach(0..<jarRows.count, id: \.self) { rowIndex in
+                                let row = jarRows[rowIndex]
+                                ShelfRowView(row: row, userID: viewModel.userID)
+                            }
+                        }
+                        .padding(.top) // Add some space from the header
                     }
                 }
                 Spacer()

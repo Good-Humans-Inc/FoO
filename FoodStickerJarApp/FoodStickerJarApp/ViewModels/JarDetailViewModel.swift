@@ -8,6 +8,7 @@ class JarDetailViewModel: ObservableObject {
     
     let jarScene = JarScene(size: .zero)
     private var cancellables = Set<AnyCancellable>()
+    private let feedbackService = FeedbackService()
     
     init() {
         setupJarSceneCommunication()
@@ -23,6 +24,13 @@ class JarDetailViewModel: ObservableObject {
     func setupScene(with size: CGSize) {
         jarScene.size = size
         // Stickers are populated in setup(for:)
+    }
+    
+    func submitFeedback(_ message: String) {
+        guard !message.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
+            return
+        }
+        feedbackService.submitFeedback(message: message)
     }
     
     private func setupJarSceneCommunication() {
