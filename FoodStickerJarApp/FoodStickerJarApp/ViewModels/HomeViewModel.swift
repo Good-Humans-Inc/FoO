@@ -38,6 +38,8 @@ class HomeViewModel: ObservableObject {
     private let firestoreService = FirestoreService()
     // The service for analyzing food images.
     private let analysisService = FoodAnalysisService()
+    // The service for handling user feedback.
+    private let feedbackService = FeedbackService()
     
     // Used to receive notifications from the JarScene when a sticker is tapped.
     private var cancellables = Set<AnyCancellable>()
@@ -191,6 +193,18 @@ class HomeViewModel: ObservableObject {
         
         // 3. Clear the temporary item to signify the commit is complete.
         stickerToCommit = nil
+    }
+    
+    /// Submits user-provided feedback via the FeedbackService.
+    /// - Parameter message: The string content of the feedback.
+    func submitFeedback(_ message: String) {
+        // Basic validation: ensure the feedback isn't empty.
+        guard !message.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
+            print("HomeViewModel: Feedback message is empty, not submitting.")
+            return
+        }
+        
+        feedbackService.submitFeedback(message: message)
     }
     
     // MARK: - Private Methods

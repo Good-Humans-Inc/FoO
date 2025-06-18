@@ -7,6 +7,10 @@ struct HomeView: View {
     // Manages the presentation of the image picker and cropper.
     @State private var showImageProcessingSheet = false
 
+    // State for the new UI
+    @State private var showFeedbackInput = false
+    @State private var feedbackText = ""
+    
     /// A computed binding that serves as the single source of truth for presenting our cover.
     /// It prioritizes showing the `newSticker` if it exists, otherwise falls back to the `selectedFoodItem`.
     private var itemForCover: Binding<FoodItem?> {
@@ -28,87 +32,155 @@ struct HomeView: View {
     }
     
     var body: some View {
-        ZStack(alignment: .bottom) {
-            // Background color matching the design.
-            Color(red: 253/255, green: 249/255, blue: 240/255)
-                .ignoresSafeArea()
-
-            // Main content VStack
-            VStack(spacing: 0) {
-                // Top placeholder button
-                HStack {
-                    Spacer()
-                    Button(action: {
-                        // Placeholder action for the top button
-                        print("Top button tapped!")
-                    }) {
-                        Image(systemName: "arrow.up")
-                            .font(.system(size: 20, weight: .bold))
-                            .foregroundColor(.black.opacity(0.4))
-                            .padding()
-                            .background(.ultraThinMaterial)
-                            .clipShape(Circle())
-                    }
-                    Spacer()
-                }
-                .padding(.top, 5) // Give it a little space from the top edge
-
-                GeometryReader { geo in
-                    let jarVisualWidth: CGFloat = geo.size.width
-                    // Make the jar taller by adjusting the aspect ratio multiplier
-                    let jarVisualHeight: CGFloat = jarVisualWidth * 1.8
-                    
-                    let spriteViewWidth = jarVisualWidth * 0.78
-                    let spriteViewHeight = jarVisualHeight * 0.72
-                    let spriteViewSize = CGSize(width: spriteViewWidth, height: spriteViewHeight)
-
-                    ZStack {
-                        Image("glassJar")
-                            .resizable()
-                            .aspectRatio(contentMode: .fit)
-                            .frame(width: jarVisualWidth, height: jarVisualHeight)
-
-                        SpriteView(scene: viewModel.jarScene)
-                            .frame(width: spriteViewSize.width, height: spriteViewSize.height)
-                            .offset(y: 1)
-                    }
-                    .frame(width: geo.size.width, height: geo.size.height)
-                    .offset(y: -40) // Move the entire jar container up
-                    .onAppear {
-                        viewModel.setupScene(with: spriteViewSize)
-                    }
-                }
-            }
-            .frame(maxWidth: .infinity, maxHeight: .infinity)
-            
-            // Floating Camera Button
-            Button(action: {
-                showImageProcessingSheet = true
-            }) {
-                Image(systemName: "camera.fill")
-                    .font(.system(size: 24, weight: .bold))
-                    .foregroundColor(.black.opacity(0.6))
-                    .padding(20)
-                    .background(.ultraThinMaterial)
-                    .clipShape(Circle())
-                    .shadow(radius: 5)
-            }
-            .padding(.bottom, 100) // Position it above the feedback bar area
-            
-            // This overlay will appear on top of the whole view when saving.
-            if viewModel.isSavingSticker {
-                Color.black.opacity(0.5)
+        NavigationView {
+            ZStack {
+                // Background color matching the design.
+                Color(red: 253/255, green: 249/255, blue: 240/255)
                     .ignoresSafeArea()
-                    .overlay {
-                        VStack {
-                            ProgressView()
-                            Text("Preparing Sticker...")
-                                .font(.title2)
-                                .foregroundColor(.white)
+                
+                // Main content VStack
+                VStack(spacing: 0) {
+                    // Top bar with new buttons
+                    HStack(spacing: 12) {
+                        Button(action: {
+                            withAnimation {
+                                // Toggle the feedback input view's visibility.
+                                showFeedbackInput.toggle()
+                            }
+                        }) {
+                            Image("logoIcon") // Make sure this asset exists
+                                .resizable()
+                                .scaledToFit()
+                                .frame(width: 84, height: 84)
+                                .clipShape(Circle())
+                        }
+                        
+                        if showFeedbackInput {
+                            // Custom Feedback Input Area
+                            HStack(spacing: 12) {
+                                TextField("Confused? Tell me about it...", text: $feedbackText)
+                                    .textFieldStyle(.plain)
+                                    .padding(.horizontal, 16)
+                                    .padding(.vertical, 10)
+                                    .background(.thinMaterial)
+                                    .clipShape(Capsule())
+
+                                Button(action: {
+                                    viewModel.submitFeedback(feedbackText)
+                                    withAnimation {
+                                        showFeedbackInput = false
+                                        feedbackText = ""
+                                    }
+                                }) {
+                                    Image(systemName: "arrow.up.circle.fill")
+                                        .font(.system(size: 28, weight: .bold))
+                                        .foregroundColor(feedbackText.isEmpty ? .gray : Color(red: 236/255, green: 138/255, blue: 83/255))
+                                }
+                                .disabled(feedbackText.isEmpty)
+                            }
+                            .padding(8)
+                            .background(
+                                .ultraThinMaterial,
+                                in: RoundedRectangle(cornerRadius: 30, style: .continuous)
+                            )
+                            .shadow(color: .black.opacity(0.1), radius: 5, x: 0, y: 2)
+                            .animation(.spring(response: 0.3, dampingFraction: 0.6), value: feedbackText.isEmpty)
+                            .transition(.opacity.combined(with: .move(edge: .trailing)))
+                            .gesture(
+                                DragGesture()
+                                    .onEnded { value in
+                                        // If user swipes from right to left, close the feedback box
+                                        if value.translation.width > 50 {
+                                            withAnimation {
+                                                showFeedbackInput = false
+                                            }
+                                        }
+                                    }
+                            )
+                        }
+                        
+                        Spacer()
+                        
+                        if !showFeedbackInput {
+                            NavigationLink(destination: ShelfView()) {
+                                Image("shelfIcon") // Make sure this asset exists
+                                    .resizable()
+                                    .scaledToFit()
+                                    .frame(width: 84, height: 84)
+                            }
+                            .transition(.opacity)
                         }
                     }
+                    .padding(.horizontal)
+                    .padding(.top, 5) // Give it a little space from the top edge
+                    .frame(height: 90) // Give the top bar a fixed height
+                    
+                    GeometryReader { geo in
+                        let jarVisualWidth: CGFloat = geo.size.width
+                        // Make the jar taller by adjusting the aspect ratio multiplier
+                        let jarVisualHeight: CGFloat = jarVisualWidth * 1.8
+                        
+                        let spriteViewWidth = jarVisualWidth * 0.78
+                        let spriteViewHeight = jarVisualHeight * 0.72
+                        let spriteViewSize = CGSize(width: spriteViewWidth, height: spriteViewHeight)
+
+                        ZStack {
+                            Image("glassJar")
+                                .resizable()
+                                .aspectRatio(contentMode: .fit)
+                                .frame(width: jarVisualWidth, height: jarVisualHeight)
+
+                            SpriteView(scene: viewModel.jarScene)
+                                .frame(width: spriteViewSize.width, height: spriteViewSize.height)
+                                .offset(y: 1)
+                        }
+                        .frame(width: geo.size.width, height: geo.size.height)
+                        .offset(y: -40) // Move the entire jar container up
+                        .onAppear {
+                            viewModel.setupScene(with: spriteViewSize)
+                        }
+                    }
+                }
+                
+                // Floating Camera Button - Centered
+                VStack {
+                    Spacer()
+                    HStack {
+                        Spacer()
+                        Button(action: {
+                            showImageProcessingSheet = true
+                        }) {
+                            Image(systemName: "camera.fill")
+                                .font(.system(size: 24, weight: .bold))
+                                .foregroundColor(.black.opacity(0.6))
+                                .padding(20)
+                                .background(.ultraThinMaterial)
+                                .clipShape(Circle())
+                                .shadow(radius: 5)
+                        }
+                        Spacer()
+                    }
+                    .padding(.bottom, 20)
+                }
+
+                // This overlay will appear on top of the whole view when saving.
+                if viewModel.isSavingSticker {
+                    Color.black.opacity(0.5)
+                        .ignoresSafeArea()
+                        .overlay {
+                            VStack {
+                                ProgressView()
+                                Text("Preparing Sticker...")
+                                    .font(.title2)
+                                    .foregroundColor(.white)
+                            }
+                        }
+                }
             }
+            .navigationBarHidden(true)
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
         }
+        .navigationViewStyle(.stack)
         // MARK: - Sheet Modifiers
         .sheet(isPresented: $showImageProcessingSheet) {
             ImageProcessingView { originalImage, stickerImage in
@@ -121,7 +193,6 @@ struct HomeView: View {
                 }
             }
         }
-        
         // A single, unified full-screen cover for presenting the detail view.
         .fullScreenCover(item: itemForCover, onDismiss: {
             // After the cover is dismissed, ask the view model to commit the new
