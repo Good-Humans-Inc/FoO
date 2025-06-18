@@ -58,6 +58,7 @@ struct JarDetailView: View {
                             viewModel.setupScene(with: CGSize(width: spriteViewWidth, height: spriteViewHeight))
                         }
                 }
+                .offset(y: -80)
 
                 // MARK: - Report Button
                 Button(action: {
