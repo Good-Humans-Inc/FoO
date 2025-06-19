@@ -43,8 +43,15 @@ struct StickerCreationView: View {
                     }
             }
 
-            Color.black.ignoresSafeArea()
-                .opacity(animationState == .detailView ? 0 : 1)
+            let isSpecial = viewModel.newSticker?.isSpecial ?? false
+            Group {
+                if isSpecial {
+                    Color.black.ignoresSafeArea()
+                } else {
+                    Color.white.ignoresSafeArea()
+                }
+            }
+            .opacity(animationState == .detailView ? 0 : 1)
 
             let _ = print("[StickerCreationView] Current animation state: \(animationState)")
 
@@ -162,11 +169,10 @@ struct StickerCreationView: View {
                         self.showHolographicEffect = false
                     }
                     
-                    // Then, after the bloom-out starts, transition to the detail view.
-                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) {
-                        withAnimation(.spring(response: 0.6, dampingFraction: 0.8)) {
-                            self.animationState = .detailView
-                        }
+                    // Then, at the same time, transition to the detail view.
+                    // This creates a smooth cross-fade instead of a fade-to-black.
+                    withAnimation(.spring(response: 0.6, dampingFraction: 0.8)) {
+                        self.animationState = .detailView
                     }
                 }
             } else {

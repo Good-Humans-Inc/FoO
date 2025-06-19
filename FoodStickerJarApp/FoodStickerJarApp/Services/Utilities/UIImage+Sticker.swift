@@ -50,20 +50,20 @@ extension UIImage {
                 ctx.cgContext.translateBy(x: 0, y: finalSize.height)
                 ctx.cgContext.scaleBy(x: 1.0, y: -1.0)
                 
-                // Define the pastel colors based on the reference images.
-                let pastelColors = [
-                    UIColor(red: 1.00, green: 0.69, blue: 0.69, alpha: 1.0), // Light Pink/Red
-                    UIColor(red: 1.00, green: 0.84, blue: 0.69, alpha: 1.0), // Light Orange
-                    UIColor(red: 1.00, green: 1.00, blue: 0.69, alpha: 1.0), // Light Yellow
-                    UIColor(red: 0.69, green: 1.00, blue: 0.84, alpha: 1.0), // Light Green/Mint
-                    UIColor(red: 0.69, green: 0.84, blue: 1.00, alpha: 1.0), // Light Blue
-                    UIColor(red: 0.84, green: 0.69, blue: 1.00, alpha: 1.0)  // Light Purple/Lavender
+                // Define a more saturated set of colors for a vibrant rainbow effect.
+                let saturatedColors = [
+                    UIColor(red: 1.00, green: 0.40, blue: 0.40, alpha: 1.0), // Saturated Pink/Red
+                    UIColor(red: 1.00, green: 0.70, blue: 0.30, alpha: 1.0), // Saturated Orange
+                    UIColor(red: 1.00, green: 1.00, blue: 0.40, alpha: 1.0), // Saturated Yellow
+                    UIColor(red: 0.40, green: 1.00, blue: 0.40, alpha: 1.0), // Saturated Green
+                    UIColor(red: 0.40, green: 0.70, blue: 1.00, alpha: 1.0), // Saturated Blue
+                    UIColor(red: 0.70, green: 0.40, blue: 1.00, alpha: 1.0)  // Saturated Purple
                 ].map { $0.cgColor }
 
                 // Create the gradient.
                 let colorSpace = CGColorSpaceCreateDeviceRGB()
                 // Render the CIImage of the sticker shape to a CGImage to use as a mask.
-                if let gradient = CGGradient(colorsSpace: colorSpace, colors: pastelColors as CFArray, locations: nil),
+                if let gradient = CGGradient(colorsSpace: colorSpace, colors: saturatedColors as CFArray, locations: nil),
                    let stickerMaskCgImage = context.createCGImage(stickerShape, from: stickerShape.extent) {
                     
                     // Clip the drawing context to the shape of the sticker outline.
@@ -78,7 +78,7 @@ extension UIImage {
 
             } else {
                 // For normal items, use the original solid white outline method.
-                let solidColor = CIImage(color: CIColor(color: UIColor(white: 0.95, alpha: 1.0)))
+                let solidColor = CIImage(color: CIColor(color: UIColor(white: 0.7, alpha: 1.0)))
                 let stickerBaseCiImage = solidColor.applyingFilter("CIBlendWithMask", parameters: [
                     kCIInputMaskImageKey: stickerShape
                 ])

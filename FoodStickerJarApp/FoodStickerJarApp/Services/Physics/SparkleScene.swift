@@ -47,9 +47,10 @@ class SparkleScene: SKScene {
             sparkleEmitter.particleBirthRate = 800
             sparkleEmitter.particleLifetime = 2.0
             sparkleEmitter.particleScale = 0.2
-            sparkleEmitter.particleColor = .white
-            sparkleEmitter.particleColorBlendFactor = 0 // Use the texture's color
-            sparkleEmitter.particleBlendMode = .screen
+            // Use dark gray sparkles for the white background.
+            sparkleEmitter.particleColor = .darkGray
+            sparkleEmitter.particleColorBlendFactor = 1.0 // Use the particle color
+            sparkleEmitter.particleBlendMode = .alpha // Standard alpha blending
         }
         
         sparkleEmitter.particleLifetimeRange = 0.5
