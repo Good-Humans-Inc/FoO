@@ -44,7 +44,7 @@ struct ShelfView: View {
                             showFeedbackInput.toggle()
                         }
                     }) {
-                        Image("logoIcon") // Make sure this asset exists
+                        Image("LogoIcon") // Make sure this asset exists
                             .resizable()
                             .scaledToFit()
                             .frame(height: 84)

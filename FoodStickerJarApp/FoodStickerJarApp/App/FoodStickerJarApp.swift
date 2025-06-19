@@ -5,18 +5,28 @@ struct FoodStickerJarApp: App {
     // Connect the AppDelegate to the SwiftUI app lifecycle.
     @UIApplicationDelegateAdaptor(AppDelegate.self) var delegate
 
-    // Create a single, shared instance of the AuthenticationService.
-    @StateObject private var authService = AuthenticationService()
-    
+    // We can still use @StateObject to make sure SwiftUI manages the lifecycle
+    // of our singleton instances.
+    @StateObject private var authService = AuthenticationService.shared
+    @StateObject private var appState = AppStateManager.shared
+
     var body: some Scene {
         WindowGroup {
-            // We show a loading view until the user is authenticated.
-            if authService.user != nil {
+            if !appState.isInitialized {
+                // While the app is fetching the user's state, show our custom loading view.
+                LaunchLoadingView()
+            } else if !appState.isOnboardingCompleted {
+                OnboardingView {
+                    // This closure is called by the OnboardingView when it's done.
+                    appState.completeOnboarding()
+                }
+            } else if authService.user != nil {
                 // We create the HomeViewModel here, only after we know the user is signed in.
                 // This ensures that all services are initialized in the correct order.
                 HomeView()
                     .environmentObject(HomeViewModel(authService: authService))
             } else {
+                // Show a loading view while Firebase is authenticating the user.
                 ProgressView()
             }
         }

@@ -10,12 +10,11 @@ class ShelfViewModel: ObservableObject {
     private(set) var userID: String?
     
     private let firestoreService = FirestoreService()
-    private let authService = AuthenticationService()
     private let feedbackService = FeedbackService()
     private var cancellables = Set<AnyCancellable>()
     
     init() {
-        authService.$user
+        AuthenticationService.shared.$user
             .compactMap { $0?.uid }
             .sink { [weak self] userID in
                 self?.userID = userID
