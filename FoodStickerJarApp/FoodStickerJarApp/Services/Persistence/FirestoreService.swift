@@ -157,24 +157,36 @@ class FirestoreService {
     /// - Parameter userID: The ID of the user to check and potentially create.
     func checkAndCreateUserDocument(for userID: String) async {
         let userDocumentRef = db.collection("users").document(userID)
+        let userTimezone = TimeZone.current.identifier
         
         do {
             // 1. Attempt to get the document.
             let document = try await userDocumentRef.getDocument()
             
-            // 2. Check if it exists and if the jarIDs field is missing.
+            // 2. Check if it exists.
             if document.exists {
-                if document.data()?["jarIDs"] == nil {
-                    // If the field is missing, update the document.
-                    try await userDocumentRef.updateData(["jarIDs": []])
-                    print("✅ FirestoreService: Repaired existing user document for \(userID) by adding missing jarIDs field.")
+                var updates: [String: Any] = [:]
+                let data = document.data()
+                
+                // Repair missing jarIDs field if needed.
+                if data?["jarIDs"] == nil {
+                    updates["jarIDs"] = []
                 }
-                // If document exists and has the field, we're done.
+                
+                // Add or update the timezone field.
+                if data?["timezone"] == nil || (data?["timezone"] as? String) != userTimezone {
+                    updates["timezone"] = userTimezone
+                }
+                
+                if !updates.isEmpty {
+                    try await userDocumentRef.updateData(updates)
+                    print("✅ FirestoreService: Repaired/updated user document for \(userID).")
+                }
             } else {
-                // 3. If the document does not exist, create it.
-                let newUser = User(id: userID, jarIDs: [])
+                // 3. If the document does not exist, create it with timezone.
+                let newUser = User(id: userID, jarIDs: [], timezone: userTimezone)
                 try userDocumentRef.setData(from: newUser)
-                print("✅ FirestoreService: Created new user document for \(userID).")
+                print("✅ FirestoreService: Created new user document for \(userID) with timezone.")
             }
         } catch {
             print("❌ FirestoreService: Failed to check or create user document for \(userID): \(error)")
@@ -257,6 +269,23 @@ class FirestoreService {
     func fetchUser(with userID: String) async throws -> User {
         let user = try await db.collection("users").document(userID).getDocument(as: User.self)
         return user
+    }
+    
+    /// Updates the user's document with their unique FCM registration token.
+    /// This token is essential for sending push notifications.
+    /// - Parameters:
+    ///   - userID: The ID of the user to update.
+    ///   - token: The new FCM token.
+    func updateUserFCMToken(for userID: String, token: String) async {
+        let userDocumentRef = db.collection("users").document(userID)
+        do {
+            // Atomically update the fcmToken field.
+            // Using `merge: true` ensures we don't overwrite other user data.
+            try await userDocumentRef.setData(["fcmToken": token], merge: true)
+            print("✅ -[FCM_DEBUG] FirestoreService: Successfully updated FCM token for user \(userID).")
+        } catch {
+            print("❌ -[FCM_DEBUG] FirestoreService: Failed to update FCM token for user \(userID): \(error)")
+        }
     }
     
     /// Fetches a collection of stickers for a given user from Firestore based on their IDs.

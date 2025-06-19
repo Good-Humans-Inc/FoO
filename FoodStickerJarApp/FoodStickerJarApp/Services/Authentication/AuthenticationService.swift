@@ -35,12 +35,29 @@ class AuthenticationService: ObservableObject {
             self?.user = user
             
             if let user = user {
-                // If we have a user, check their onboarding status.
+                // If we have a user, sync their FCM token and check onboarding.
+                self?.syncFCMToken(for: user.uid)
                 self?.checkOnboardingStatus(for: user.uid)
             } else {
                 // If there's no user, it means we need to sign in anonymously.
                 self?.signInAnonymously()
             }
+        }
+    }
+    
+    /// Checks UserDefaults for a stored FCM token and syncs it to Firestore.
+    /// This is a fallback for cases where the token is received before the initial auth state is confirmed.
+    private func syncFCMToken(for userID: String) {
+        // Check if a token exists in UserDefaults
+        if let token = UserDefaults.standard.string(forKey: "fcmToken") {
+            print("-[FCM_DEBUG] Found pre-existing token in UserDefaults during auth. Syncing to Firestore for user \(userID)...")
+            Task {
+                // Update the token in Firestore
+                await firestoreService.updateUserFCMToken(for: userID, token: token)
+            }
+        } else {
+            // This is normal on first launch or if the token delegate hasn't fired yet.
+            print("-[FCM_DEBUG] No pre-existing FCM token found in UserDefaults during auth. Will wait for delegate callback.")
         }
     }
     
