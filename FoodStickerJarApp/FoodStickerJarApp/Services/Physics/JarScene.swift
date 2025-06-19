@@ -83,8 +83,11 @@ class JarScene: SKScene, SKPhysicsContactDelegate {
         let distance = hypot(location.x - touchStartPos.x, location.y - touchStartPos.y)
         
         if distance < 15 { // Treat as a tap if movement was minimal.
-            if let nodeName = draggedNode.name, let itemID = UUID(uuidString: nodeName) {
-                onStickerTapped.send(itemID)
+            if let nodeName = draggedNode.name, nodeName.starts(with: "sticker-") {
+                let uuidString = String(nodeName.dropFirst("sticker-".count))
+                if let itemID = UUID(uuidString: uuidString) {
+                    onStickerTapped.send(itemID)
+                }
             }
         } else {
             // This was a drag. Check if the sticker is outside the jar.
@@ -136,12 +139,12 @@ class JarScene: SKScene, SKPhysicsContactDelegate {
 
         for item in items {
             // Asynchronously load the image and add the sticker.
-            addSticker(foodItem: item)
+            addSticker(foodItem: item, isNew: false)
         }
     }
     
     /// Adds a new sticker to the scene, either from a provided UIImage or by downloading from a URL.
-    func addSticker(foodItem: FoodItem, image: UIImage? = nil) {
+    func addSticker(foodItem: FoodItem, image: UIImage? = nil, isNew: Bool = false) {
         foodItemsById[foodItem.id] = foodItem
         
         if let providedImage = image {
@@ -163,11 +166,17 @@ class JarScene: SKScene, SKPhysicsContactDelegate {
                     let texture = SKTexture(image: value.image)
                     let node = self.createStickerNode(for: foodItem, with: texture)
                     
-                    // Place existing stickers randomly inside the jar.
-                    node.position = CGPoint(
-                        x: CGFloat.random(in: self.frame.minX...self.frame.maxX),
-                        y: CGFloat.random(in: self.frame.minY...self.frame.maxY)
-                    )
+                    if isNew {
+                        // For new stickers, drop from the top-center.
+                        node.position = CGPoint(x: self.frame.midX, y: self.frame.maxY)
+                        node.physicsBody?.velocity = CGVector(dx: 0, dy: -50) // Give it a push
+                    } else {
+                        // For existing stickers, place randomly inside the jar to avoid overload.
+                        node.position = CGPoint(
+                            x: CGFloat.random(in: self.frame.minX + 40...self.frame.maxX - 40),
+                            y: CGFloat.random(in: self.frame.minY + 40...self.frame.maxY - 40)
+                        )
+                    }
                     
                     self.addChild(node)
                 case .failure(let error):

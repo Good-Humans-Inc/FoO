@@ -198,7 +198,7 @@ class HomeViewModel: ObservableObject {
         foodItems.append(itemToAdd)
         
         // 2. Add the sticker to the physics scene, triggering the animation.
-        jarScene.addSticker(foodItem: itemToAdd)
+        jarScene.addSticker(foodItem: itemToAdd, isNew: true)
         
         // 3. Clear the temporary item to signify the commit is complete.
         stickerToCommit = nil
