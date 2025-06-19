@@ -16,4 +16,5 @@ struct User: Codable, Identifiable {
     var pronoun: String?
     var goals: [String]?
     var onboardingCompleted: Bool?
+    var timezone: String?
 } 

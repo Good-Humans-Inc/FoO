@@ -137,24 +137,36 @@ class FirestoreService {
     /// - Parameter userID: The ID of the user to check and potentially create.
     func checkAndCreateUserDocument(for userID: String) async {
         let userDocumentRef = db.collection("users").document(userID)
+        let userTimezone = TimeZone.current.identifier
         
         do {
             // 1. Attempt to get the document.
             let document = try await userDocumentRef.getDocument()
             
-            // 2. Check if it exists and if the jarIDs field is missing.
+            // 2. Check if it exists.
             if document.exists {
-                if document.data()?["jarIDs"] == nil {
-                    // If the field is missing, update the document.
-                    try await userDocumentRef.updateData(["jarIDs": []])
-                    print("✅ FirestoreService: Repaired existing user document for \(userID) by adding missing jarIDs field.")
+                var updates: [String: Any] = [:]
+                let data = document.data()
+                
+                // Repair missing jarIDs field if needed.
+                if data?["jarIDs"] == nil {
+                    updates["jarIDs"] = []
                 }
-                // If document exists and has the field, we're done.
+                
+                // Add or update the timezone field.
+                if data?["timezone"] == nil || (data?["timezone"] as? String) != userTimezone {
+                    updates["timezone"] = userTimezone
+                }
+                
+                if !updates.isEmpty {
+                    try await userDocumentRef.updateData(updates)
+                    print("✅ FirestoreService: Repaired/updated user document for \(userID).")
+                }
             } else {
-                // 3. If the document does not exist, create it.
-                let newUser = User(id: userID, jarIDs: [])
+                // 3. If the document does not exist, create it with timezone.
+                let newUser = User(id: userID, jarIDs: [], timezone: userTimezone)
                 try userDocumentRef.setData(from: newUser)
-                print("✅ FirestoreService: Created new user document for \(userID).")
+                print("✅ FirestoreService: Created new user document for \(userID) with timezone.")
             }
         } catch {
             print("❌ FirestoreService: Failed to check or create user document for \(userID): \(error)")

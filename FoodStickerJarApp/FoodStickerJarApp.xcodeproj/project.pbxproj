@@ -29,9 +29,22 @@
 		2C3C4B932DFB72F5005E2C14 /* FoodStickerJarApp.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = FoodStickerJarApp.app; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
+/* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
+		2C49A1862E049E2C00256CEA /* Exceptions for "FoodStickerJarApp" folder in "FoodStickerJarApp" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				Info.plist,
+			);
+			target = 2C3C4B922DFB72F5005E2C14 /* FoodStickerJarApp */;
+		};
+/* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
+
 /* Begin PBXFileSystemSynchronizedRootGroup section */
 		2C3C4B952DFB72F5005E2C14 /* FoodStickerJarApp */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+				2C49A1862E049E2C00256CEA /* Exceptions for "FoodStickerJarApp" folder in "FoodStickerJarApp" target */,
+			);
 			path = FoodStickerJarApp;
 			sourceTree = "<group>";
 		};
@@ -316,7 +329,7 @@
 				DEVELOPMENT_TEAM = 2MLHSW6S86;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
-				INFOPLIST_FILE = "";
+				INFOPLIST_FILE = FoodStickerJarApp/Info.plist;
 				INFOPLIST_KEY_NSCameraUsageDescription = "Use your camera to capture food!";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
@@ -350,7 +363,7 @@
 				DEVELOPMENT_TEAM = 2MLHSW6S86;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
-				INFOPLIST_FILE = "";
+				INFOPLIST_FILE = FoodStickerJarApp/Info.plist;
 				INFOPLIST_KEY_NSCameraUsageDescription = "Use your camera to capture food!";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
