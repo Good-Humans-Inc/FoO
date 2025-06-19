@@ -41,6 +41,15 @@ extension UIImage {
             if isSpecial {
                 // For special items, draw a pastel rainbow gradient.
                 
+                // Save the graphics state before clipping so it can be restored later.
+                ctx.cgContext.saveGState()
+                
+                // --- FIX: Flip the context vertically to match Core Image's coordinate system. ---
+                // This is necessary because the mask is created from a CIImage (bottom-left origin)
+                // but is being applied in a Core Graphics context (top-left origin).
+                ctx.cgContext.translateBy(x: 0, y: finalSize.height)
+                ctx.cgContext.scaleBy(x: 1.0, y: -1.0)
+                
                 // Define the pastel colors based on the reference images.
                 let pastelColors = [
                     UIColor(red: 1.00, green: 0.69, blue: 0.69, alpha: 1.0), // Light Pink/Red
@@ -53,16 +62,19 @@ extension UIImage {
 
                 // Create the gradient.
                 let colorSpace = CGColorSpaceCreateDeviceRGB()
-                let gradient = CGGradient(colorsSpace: colorSpace, colors: pastelColors as CFArray, locations: nil)!
-
                 // Render the CIImage of the sticker shape to a CGImage to use as a mask.
-                guard let stickerMaskCgImage = context.createCGImage(stickerShape, from: stickerShape.extent) else { return }
+                if let gradient = CGGradient(colorsSpace: colorSpace, colors: pastelColors as CFArray, locations: nil),
+                   let stickerMaskCgImage = context.createCGImage(stickerShape, from: stickerShape.extent) {
+                    
+                    // Clip the drawing context to the shape of the sticker outline.
+                    ctx.cgContext.clip(to: CGRect(origin: .zero, size: finalSize), mask: stickerMaskCgImage)
+                    
+                    // Draw the gradient into the newly clipped (and flipped) area.
+                    ctx.cgContext.drawLinearGradient(gradient, start: CGPoint(x: 0, y: 0), end: CGPoint(x: 0, y: finalSize.height), options: [])
+                }
                 
-                // Clip the drawing context to the shape of the sticker outline.
-                ctx.cgContext.clip(to: CGRect(origin: .zero, size: finalSize), mask: stickerMaskCgImage)
-                
-                // Draw the gradient. We'll make it diagonal for a nice effect.
-                ctx.cgContext.drawLinearGradient(gradient, start: CGPoint(x: 0, y: 0), end: CGPoint(x: finalSize.width, y: finalSize.height), options: [])
+                // Restore the original graphics state, which removes the clipping mask and the flip transform.
+                ctx.cgContext.restoreGState()
 
             } else {
                 // For normal items, use the original solid white outline method.
