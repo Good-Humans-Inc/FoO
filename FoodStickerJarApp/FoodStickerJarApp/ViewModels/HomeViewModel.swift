@@ -169,7 +169,7 @@ class HomeViewModel: ObservableObject {
         if isSpecial {
             SoundManager.shared.playSound(named: "specialGen")
         } else {
-            SoundManager.shared.playSound(named: "stickerGen")
+            SoundManager.shared.playSound(named: "normalGen")
         }
         
         guard let userId = self.userId else {

@@ -45,7 +45,7 @@ struct HomeView: View {
                                 showFeedbackInput.toggle()
                             }
                         }) {
-                            Image("LogoIcon") // Make sure this asset exists
+                            Image("logoIcon") // Make sure this asset exists
                                 .resizable()
                                 .scaledToFit()
                                 .frame(width: 84, height: 84)
