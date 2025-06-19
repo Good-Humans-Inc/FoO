@@ -13,3 +13,4 @@ Pods/
 # Firebase
 GoogleService-Info.plist 
 .env
+.build/
