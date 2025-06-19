@@ -14,6 +14,9 @@ class JarScene: SKScene, SKPhysicsContactDelegate {
     let onStickerTapped = PassthroughSubject<UUID, Never>()
     var foodItemsById: [UUID: FoodItem] = [:]
     
+    // A hard limit on the speed of any sticker to prevent tunneling and instability.
+    private let maxStickerSpeed: CGFloat = 800.0
+    
     // Properties to handle dragging stickers
     private var draggedNode: SKNode?
     private var touchStartPos: CGPoint?
@@ -116,6 +119,28 @@ class JarScene: SKScene, SKPhysicsContactDelegate {
         self.nodeStartPos = nil
     }
     
+    override func update(_ currentTime: TimeInterval) {
+        // Called before each frame is rendered
+        
+        // --- PERFORMANCE: Limit the maximum velocity of all stickers ---
+        // This prevents objects from gaining excessive speed (e.g., from a violent shake)
+        // which can cause them to tunnel through the jar walls or behave erratically.
+        for node in self.children {
+            if node.physicsBody?.categoryBitMask == PhysicsCategory.sticker {
+                guard let physicsBody = node.physicsBody else { continue }
+                
+                let speed = hypot(physicsBody.velocity.dx, physicsBody.velocity.dy)
+                
+                if speed > maxStickerSpeed {
+                    // Calculate the ratio of the current speed to the max speed.
+                    let ratio = maxStickerSpeed / speed
+                    // Scale down the velocity vector to match the max speed.
+                    physicsBody.velocity = CGVector(dx: physicsBody.velocity.dx * ratio, dy: physicsBody.velocity.dy * ratio)
+                }
+            }
+        }
+    }
+    
     // This is called automatically when the view's size changes.
     override func didChangeSize(_ oldSize: CGSize) {
         super.didChangeSize(oldSize)
@@ -150,7 +175,7 @@ class JarScene: SKScene, SKPhysicsContactDelegate {
         if let providedImage = image {
             // If an image is provided directly (e.g., for the report scroll), use it.
             let texture = SKTexture(image: providedImage)
-            let node = createStickerNode(for: foodItem, with: texture)
+            let node = createStickerNode(for: foodItem, with: texture, image: providedImage)
             self.addChild(node)
             // Start the new sticker at the top-center of the jar.
             node.position = CGPoint(x: self.frame.midX, y: self.frame.maxY)
@@ -164,7 +189,7 @@ class JarScene: SKScene, SKPhysicsContactDelegate {
                 switch result {
                 case .success(let value):
                     let texture = SKTexture(image: value.image)
-                    let node = self.createStickerNode(for: foodItem, with: texture)
+                    let node = self.createStickerNode(for: foodItem, with: texture, image: value.image)
                     
                     if isNew {
                         // For new stickers, drop from the top-center.
@@ -215,7 +240,7 @@ class JarScene: SKScene, SKPhysicsContactDelegate {
 
     // MARK: - Private Helper Methods
     
-    private func createStickerNode(for foodItem: FoodItem, with texture: SKTexture) -> SKNode {
+    private func createStickerNode(for foodItem: FoodItem, with texture: SKTexture, image: UIImage) -> SKNode {
         let node = SKSpriteNode(texture: texture)
         
         // Use the UUID as the node's name for identification on tap.
@@ -236,17 +261,35 @@ class JarScene: SKScene, SKPhysicsContactDelegate {
         }
         node.size = stickerSize
         
+        // --- OPTIMIZATION: Create a simplified physics body ---
+        // 1. Create a very low-resolution version of the image. This drastically
+        //    reduces the vertex count of the resulting physics polygon and makes it
+        //    "smoother" and less likely to snag on the thin jar boundary.
+        let physicsImage = image.resized(toMaxSize: 30) // Further reduced for stability
+        let physicsTexture = SKTexture(image: physicsImage)
+        
+        // 2. Create the physics body from the LOW-RES texture, but scale it to the
+        //    correct visual size of the node. This maintains the sticker's shape
+        //    while using a much simpler polygon for calculations.
+        node.physicsBody = SKPhysicsBody(texture: physicsTexture, size: node.size)
+        
         // Create a more accurate physics body from the texture's shape, using the corrected size.
-        node.physicsBody = SKPhysicsBody(texture: texture, size: node.size)
         node.physicsBody?.categoryBitMask = PhysicsCategory.sticker
         node.physicsBody?.collisionBitMask = PhysicsCategory.sticker | PhysicsCategory.wall
         node.physicsBody?.contactTestBitMask = PhysicsCategory.wall
         node.physicsBody?.usesPreciseCollisionDetection = true // Prevents tunneling through walls.
         
-        // Adjust physics properties to be less "sticky" and more "bouncy".
-        node.physicsBody?.restitution = 0.4 // Increased bounciness
-        node.physicsBody?.friction = 0.1    // Reduced friction
+        // Adjust physics properties for stability and feel.
+        node.physicsBody?.restitution = 0.1 // Reduced bounciness to prevent jitter.
+        node.physicsBody?.friction = 0.4    // Increased friction to help objects settle.
         node.physicsBody?.allowsRotation = true
+        
+        // --- FIX: Add damping to prevent vibration ---
+        // Damping gradually reduces the sticker's linear and angular velocity over
+        // time, helping it to come to a complete stop and enter a resting state.
+        // This is the key to preventing jittering in a large stack of objects.
+        node.physicsBody?.linearDamping = 0.5
+        node.physicsBody?.angularDamping = 0.5
         
         return node
     }
