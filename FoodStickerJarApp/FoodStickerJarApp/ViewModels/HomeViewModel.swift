@@ -179,6 +179,15 @@ class HomeViewModel: ObservableObject {
                 if self.stickerToCommit?.id == updatedItem.id {
                     self.stickerToCommit = updatedItem
                 }
+                
+                // --- FIX: Update the item in the main array as well ---
+                // This handles the case where the user dismissed the sheet before
+                // analysis completed. The item is already in the jar, but its
+                // local data is stale. This ensures it gets updated.
+                if let index = self.foodItems.firstIndex(where: { $0.id == updatedItem.id }) {
+                    print("[HomeViewModel] Analysis for committed sticker \(updatedItem.id) complete. Updating master list.")
+                    self.foodItems[index] = updatedItem
+                }
             }
 
         } catch {

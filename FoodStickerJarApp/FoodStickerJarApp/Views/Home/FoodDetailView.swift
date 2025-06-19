@@ -31,7 +31,7 @@ struct FoodDetailView: View {
         "Just to remind you this is your food jar, not your poison control center.",
         "Blink twice if you need help.",
         "For your safety, and mine, let's not.",
-        "Debatable.",
+        "Debatable food choice.",
         "Let's call this one \"Abstract Cuisine\".",
         "Is it cake?",
         "The plot thickens...",
@@ -50,7 +50,7 @@ struct FoodDetailView: View {
                 // Header with a close button on the right
                 HStack {
                     Text(foodItem.creationDate, format: .dateTime.month(.abbreviated).day().hour().minute())
-                        .font(.system(size: 16, weight: .bold, design: .rounded))
+                        .font(.system(size: 16, weight: .light, design: .rounded))
                         .foregroundColor(.secondary)
 
                     Spacer()
@@ -97,7 +97,7 @@ struct FoodDetailView: View {
                         .frame(maxHeight: 350)
                         .shadow(color: .black.opacity(0.2), radius: 15, y: 10)
                         .padding(.horizontal, 40)
-                        .padding(.bottom, 20)
+                        .padding(.vertical, 20)
 
                         // Info Section
                         VStack(spacing: 16) {
@@ -119,14 +119,13 @@ struct FoodDetailView: View {
                             
                             // Details
                             if foodItem.isFood == true {
-                                // Case: It's a food item with full details.
-                                if let funFact = foodItem.funFact, let nutrition = foodItem.nutrition,
-                                   funFact != "N/A", nutrition != "N/A" {
-                                    VStack(alignment: .leading, spacing: 16) {
-                                        InfoRow(title: "Do you know?", content: funFact)
-                                        InfoRow(title: "Nutrition", content: nutrition)
-                                    }
-                                    .frame(maxWidth: .infinity, alignment: .leading)
+                                // Case: It's a food item. Display nutrition info in the unified format.
+                                if let nutrition = foodItem.nutrition, nutrition != "N/A" {
+                                    Text(nutrition)
+                                        .font(.custom("Georgia", size: 17))
+                                        .foregroundColor(.secondary)
+                                        .multilineTextAlignment(.center)
+                                        .padding(.top)
                                 } else {
                                     // This can happen if analysis is still processing for a food item.
                                     ProgressView()
@@ -148,7 +147,6 @@ struct FoodDetailView: View {
                             // --- SPECIAL CONTENT SECTION ---
                             // This section only appears if the item is marked as special.
                             if foodItem.isSpecial == true {
-                                Divider()
                                 SpecialContentView(content: foodItem.specialContent)
                                     .padding(.top, 10)
                             }
@@ -161,12 +159,18 @@ struct FoodDetailView: View {
                 }
             }
             .background(
-                // Use a different background for special items.
-                (foodItem.isSpecial == true) ?
-                LinearGradient(gradient: Gradient(colors: [Color(red: 1.0, green: 0.98, blue: 0.85), Color(red: 1.0, green: 0.9, blue: 0.8)]), startPoint: .topLeading, endPoint: .bottomTrailing) :
-                LinearGradient(gradient: Gradient(colors: [Color(.systemGray6)]), startPoint: .top, endPoint: .bottom)
+                // The background Group allows the .ignoresSafeArea() modifier to apply
+                // only to the background gradients, not the VStack containing the content.
+                Group {
+                    // Use a different background for special items.
+                    if foodItem.isSpecial == true {
+                        LinearGradient(gradient: Gradient(colors: [Color(red: 1.0, green: 0.98, blue: 0.85), Color(red: 1.0, green: 0.9, blue: 0.8)]), startPoint: .topLeading, endPoint: .bottomTrailing)
+                    } else {
+                        LinearGradient(gradient: Gradient(colors: [Color(.systemGray6)]), startPoint: .top, endPoint: .bottom)
+                    }
+                }
+                .ignoresSafeArea()
             )
-            .ignoresSafeArea()
             .onAppear {
                 // If this view is part of a hero transition, delay the content appearance.
                 if namespace != nil {
@@ -195,7 +199,7 @@ private struct SpecialContentView: View {
             HStack {
                 Image(systemName: "sparkles")
                     .foregroundColor(.orange)
-                Text("A Rare Find!")
+                Text("A Rare Sticker!")
                     .font(.headline)
                     .foregroundColor(.secondary)
             }

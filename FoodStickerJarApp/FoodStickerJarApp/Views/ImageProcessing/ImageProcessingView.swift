@@ -98,27 +98,30 @@ private struct SubjectLiftContainerView: View {
             // Overlay UI for instructions and buttons.
             VStack {
                 // Instruction text based on the analysis state.
-                switch analysisState {
-                case .analyzing:
-                    Text("Taking a look ( •̀_•́)ノ")
-                        .padding()
-                        .background(.black.opacity(0.7))
-                        .foregroundColor(.white)
-                        .cornerRadius(10)
-                case .subjectsFound:
-                    Text("Found it! (≧◡≦)♡")
-                        .padding()
-                        .background(.black.opacity(0.7))
-                        .foregroundColor(.white)
-                        .cornerRadius(10)
-                case .noSubjectsFound:
-                    Text("Hmm... I'm lost ( •́‸•̀) Can you center the food and get a clear, close shot?")
-                        .padding()
-                        .multilineTextAlignment(.center)
-                        .background(Color.red.opacity(0.8))
-                        .foregroundColor(.white)
-                        .cornerRadius(10)
+                Group {
+                    switch analysisState {
+                    case .analyzing:
+                        Text("Taking a look ( •̀_•́)ノ")
+                            .padding()
+                            .background(.black.opacity(0.7))
+                            .foregroundColor(.white)
+                            .cornerRadius(10)
+                    case .subjectsFound:
+                        Text("Found it! (≧◡≦)♡")
+                            .padding()
+                            .background(.black.opacity(0.7))
+                            .foregroundColor(.white)
+                            .cornerRadius(10)
+                    case .noSubjectsFound:
+                        Text("Hmm... I'm lost ( •́‸•̀) Can you center the food and get a clear, close shot?")
+                            .padding()
+                            .multilineTextAlignment(.center)
+                            .background(Color.red.opacity(0.8))
+                            .foregroundColor(.white)
+                            .cornerRadius(10)
+                    }
                 }
+                .padding(.top, 60)
                 
                 Spacer()
                 
