@@ -2,8 +2,8 @@ import firebase_admin
 from firebase_admin import credentials, firestore, messaging
 import functions_framework
 
-# Initialize Firebase Admin SDK
-firebase_admin.initialize_app()
+# Global flag to ensure Firebase is initialized only once.
+_firebase_app_initialized = False
 
 @functions_framework.http
 def test_send_notification(request):
@@ -12,6 +12,11 @@ def test_send_notification(request):
     users with a valid FCM token. This function is isolated in its own deployment
     for maximum safety.
     """
+    global _firebase_app_initialized
+    if not _firebase_app_initialized:
+        firebase_admin.initialize_app()
+        _firebase_app_initialized = True
+        
     db = firestore.client()
     
     print("--- RUNNING ON-DEMAND TEST (ISOLATED) ---")

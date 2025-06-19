@@ -4,9 +4,8 @@ import functions_framework
 from datetime import datetime
 from zoneinfo import ZoneInfo, available_timezones
 
-# Initialize Firebase Admin SDK
-# In a Google Cloud environment, the SDK can automatically find the service account credentials.
-firebase_admin.initialize_app()
+# Global flag to ensure Firebase is initialized only once.
+_firebase_app_initialized = False
 
 TARGET_HOURS = [7, 11, 17]  # 7am, 11am, 5pm
 
@@ -16,6 +15,11 @@ def send_daily_notification(request):
     An HTTP-triggered Cloud Function that sends push notifications to users
     based on their local time. It's designed to be run hourly.
     """
+    global _firebase_app_initialized
+    if not _firebase_app_initialized:
+        firebase_admin.initialize_app()
+        _firebase_app_initialized = True
+        
     db = firestore.client()
     
     # 1. Determine the current hour in UTC.
