@@ -44,6 +44,7 @@ struct StickerCreationView: View {
             }
 
             let isSpecial = viewModel.newSticker?.isSpecial ?? false
+            let _ = print("[StickerCreationView] Body loading with isSpecial = \(isSpecial)")
             Group {
                 if isSpecial {
                     Color.black.ignoresSafeArea()

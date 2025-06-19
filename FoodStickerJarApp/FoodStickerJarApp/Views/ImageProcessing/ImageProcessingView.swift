@@ -35,6 +35,10 @@ struct ImageProcessingView: View {
             .ignoresSafeArea()
             
         case .cropping(let image):
+            // Determine if the sticker will be special *before* showing the cropping view.
+            let isSpecial = Double.random(in: 0...1) < AppConfig.specialItemProbability
+            let _ = print("[ImageProcessingView] Determined isSpecial = \(isSpecial)")
+            
             // This view contains the VisionKit subject lifting logic.
             SubjectLiftContainerView(image: image, onComplete: { finalSticker, isSpecial in
                 
@@ -51,7 +55,7 @@ struct ImageProcessingView: View {
                 Task {
                     await viewModel.processNewSticker(id: stickerID, originalImage: image, stickerImage: finalSticker)
                 }
-            })
+            }, isSpecial: isSpecial) // Pass the determined value here.
             .ignoresSafeArea()
             
         case .animating(let original, let sticker):
@@ -77,6 +81,7 @@ struct ImageProcessingView: View {
 private struct SubjectLiftContainerView: View {
     let image: UIImage
     let onComplete: (UIImage, Bool) -> Void
+    let isSpecial: Bool
     
     // The VisionKit interaction object.
     @State private var interaction = ImageAnalysisInteraction()
@@ -95,8 +100,16 @@ private struct SubjectLiftContainerView: View {
     }
     
     var body: some View {
+        let _ = print("[SubjectLiftContainerView] Body loading with isSpecial = \(isSpecial)")
         ZStack {
-            Color.black.ignoresSafeArea()
+            // Conditionally set the background color.
+            Group {
+                if isSpecial {
+                    Color.black.ignoresSafeArea()
+                } else {
+                    Color.white.ignoresSafeArea()
+                }
+            }
             
             SubjectLiftView(image: image, interaction: interaction)
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -109,24 +122,23 @@ private struct SubjectLiftContainerView: View {
                     case .analyzing:
                         Text("Taking a look ( •̀_•́)ノ")
                             .padding()
-                            .background(.black.opacity(0.7))
-                            .foregroundColor(.white)
+                            .background(.thinMaterial) // Use thin material for adaptive background.
                             .cornerRadius(10)
                     case .subjectsFound:
                         Text("Found it! (≧◡≦)♡")
                             .padding()
-                            .background(.black.opacity(0.7))
-                            .foregroundColor(.white)
+                            .background(.thinMaterial) // Use thin material for adaptive background.
                             .cornerRadius(10)
                     case .noSubjectsFound:
                         Text("Hmm... I'm lost ( •́‸•̀) Can you center the food and get a clear, close shot?")
                             .padding()
                             .multilineTextAlignment(.center)
                             .background(Color.red.opacity(0.8))
-                            .foregroundColor(.white)
+                            .foregroundColor(.white) // Keep white text on red background
                             .cornerRadius(10)
                     }
                 }
+                .foregroundColor(isSpecial ? .white : .black) // Adaptive text color
                 .padding(.top, 60)
                 
                 Spacer()
@@ -178,8 +190,8 @@ private struct SubjectLiftContainerView: View {
                     let subjectImage = try await interaction.image(for: [mainSubject])
                     print("[SubjectLift] Subject image extracted. Applying sticker effect...")
                     
-                    // Determine if the sticker is special right here, before creating the image.
-                    let isSpecial = Double.random(in: 0...1) < AppConfig.specialItemProbability
+                    // The 'isSpecial' flag is now passed in from the parent view.
+                    // We no longer determine it here.
                     print("[SubjectLift] Sticker is special: \(isSpecial)")
                     
                     // Use a wider border for special items to make them pop.

@@ -24,6 +24,10 @@ class HomeViewModel: ObservableObject {
     // when the view is dismissed.
     private var stickerToCommit: FoodItem?
     
+    // A flag to handle the race condition where the user dismisses the
+    // detail sheet before the background image upload is complete.
+    private var commitIsPending = false
+    
     // State properties for managing the sticker creation UI flow.
     @Published var isSavingSticker = false
     @Published var stickerCreationError: String?
@@ -149,12 +153,20 @@ class HomeViewModel: ObservableObject {
             let savedItemWithURLs = try await savingTask
 
             // 4. Update the UI on the main thread with the new URLs.
+            //    This is the point where the sticker is "committable".
             await MainActor.run {
                 if self.newSticker?.id == id {
                     self.newSticker?.imageURLString = savedItemWithURLs.imageURLString
                     self.newSticker?.thumbnailURLString = savedItemWithURLs.thumbnailURLString
                     self.newSticker?.originalImageURLString = savedItemWithURLs.originalImageURLString
                     self.stickerToCommit = self.newSticker
+                }
+                
+                // If the user has already dismissed the sheet, the commit will be pending.
+                // Now that the URLs are ready, we can perform the commit.
+                if self.commitIsPending {
+                    print("[HomeViewModel] Commit was pending, and URLs are now ready. Performing commit.")
+                    self.performCommit()
                 }
             }
 
@@ -214,9 +226,39 @@ class HomeViewModel: ObservableObject {
     /// view for a new sticker is dismissed.
     func commitNewStickerIfNecessary() {
         // Use the private, safe-guarded copy of the sticker.
-        // If this is nil, it means we weren't in a new-sticker flow, so we do nothing.
         guard let itemToAdd = stickerToCommit else {
             print("[HomeViewModel] commitNewStickerIfNecessary called, but no sticker to commit.")
+            return
+        }
+        
+        // If the thumbnail URL isn't populated yet, it means the background
+        // upload isn't complete. We'll pend the commit and let the background
+        // task trigger it once the URL is ready.
+        if itemToAdd.thumbnailURLString.isEmpty {
+            print("[HomeViewModel] URLs not ready for sticker \(itemToAdd.id). Pending commit.")
+            self.commitIsPending = true
+        } else {
+            // The URLs are ready, so we can commit immediately.
+            print("[HomeViewModel] URLs ready for sticker \(itemToAdd.id). Performing commit now.")
+            self.performCommit()
+        }
+    }
+    
+    /// The actual logic for committing the sticker to the view model and scene.
+    /// This is separated so it can be called from multiple places.
+    private func performCommit() {
+        guard let itemToAdd = stickerToCommit else {
+            print("[HomeViewModel] performCommit called, but no sticker to commit.")
+            return
+        }
+        
+        // Ensure this item hasn't already been added.
+        guard !foodItems.contains(where: { $0.id == itemToAdd.id }) else {
+            print("[HomeViewModel] performCommit called, but sticker \(itemToAdd.id) is already in the collection.")
+            // Reset state even if we don't add the sticker again.
+            stickerToCommit = nil
+            newSticker = nil
+            commitIsPending = false
             return
         }
         
@@ -231,6 +273,7 @@ class HomeViewModel: ObservableObject {
         print("[HomeViewModel] Sticker committed. Clearing all temporary state.")
         stickerToCommit = nil
         newSticker = nil
+        commitIsPending = false
     }
     
     // MARK: - Private Methods
