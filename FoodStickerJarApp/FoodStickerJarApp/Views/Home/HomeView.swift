@@ -189,7 +189,7 @@ struct HomeView: View {
                         .overlay {
                             VStack {
                                 ProgressView()
-                                Text("Preparing Sticker...")
+                                Text("( ˘▽˘)っ Making your sticker...")
                                     .font(.title2)
                                     .foregroundColor(.white)
                             }
@@ -202,7 +202,7 @@ struct HomeView: View {
                         .overlay {
                             VStack {
                                 ProgressView()
-                                Text("Archiving Jar...")
+                                Text("( ˘▽˘)っ Jas'ing it up...")
                                     .font(.title2)
                                     .foregroundColor(.white)
                             }
