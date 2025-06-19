@@ -50,6 +50,20 @@ class AppDelegate: NSObject, UIApplicationDelegate {
         
         completionHandler(UIBackgroundFetchResult.newData)
     }
+
+    func application(_ application: UIApplication, didRegisterForRemoteNotificationsWithDeviceToken deviceToken: Data) {
+        let tokenParts = deviceToken.map { data in String(format: "%02.2hhx", data) }
+        let token = tokenParts.joined()
+        print("-[FCM_DEBUG] Successfully registered for remote notifications. APNS token received: \(token)")
+
+        // Pass the APNS token to Firebase.
+        // The MessagingDelegate's `didReceiveRegistrationToken` will be called with the FCM token.
+        Messaging.messaging().apnsToken = deviceToken
+    }
+
+    func application(_ application: UIApplication, didFailToRegisterForRemoteNotificationsWithError error: Error) {
+        print("-[FCM_DEBUG] Failed to register for remote notifications: \(error.localizedDescription)")
+    }
 }
 
 extension AppDelegate: UNUserNotificationCenterDelegate {
@@ -86,21 +100,26 @@ extension AppDelegate: UNUserNotificationCenterDelegate {
 
 extension AppDelegate: MessagingDelegate {
     func messaging(_ messaging: Messaging, didReceiveRegistrationToken fcmToken: String?) {
-        print("Firebase registration token: \(String(describing: fcmToken))")
+        guard let token = fcmToken else {
+            print("-[FCM_DEBUG] FCM token received from Firebase is nil.")
+            return
+        }
         
-        let dataDict: [String: String] = ["token": fcmToken ?? ""]
-        NotificationCenter.default.post(
-            name: Notification.Name("FCMToken"),
-            object: nil,
-            userInfo: dataDict
-        )
+        print("-[FCM_DEBUG] Received new FCM token: \(token)")
         
-        // Save the token to Firestore
-        guard let token = fcmToken else { return }
-        guard let userID = AuthenticationService.shared.user?.uid else { return }
+        // Save token to UserDefaults immediately.
+        UserDefaults.standard.set(token, forKey: "fcmToken")
+        print("-[FCM_DEBUG] Saved FCM token to UserDefaults.")
         
-        Task {
-            await FirestoreService().updateUserFCMToken(for: userID, token: token)
+        // Attempt to update Firestore if the user is already authenticated.
+        // If not, the token will be synced later upon login.
+        if let userID = AuthenticationService.shared.user?.uid {
+            print("-[FCM_DEBUG] User is already authenticated (\(userID)). Attempting to sync token to Firestore immediately.")
+            Task {
+                await FirestoreService().updateUserFCMToken(for: userID, token: token)
+            }
+        } else {
+            print("-[FCM_DEBUG] User not authenticated. Token will be synced upon next login.")
         }
     }
 } 

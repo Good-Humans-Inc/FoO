@@ -251,17 +251,20 @@ class FirestoreService {
         return user
     }
     
-    /// Updates the user's document with their FCM token for push notifications.
+    /// Updates the user's document with their unique FCM registration token.
+    /// This token is essential for sending push notifications.
     /// - Parameters:
     ///   - userID: The ID of the user to update.
-    ///   - token: The FCM registration token.
+    ///   - token: The new FCM token.
     func updateUserFCMToken(for userID: String, token: String) async {
         let userDocumentRef = db.collection("users").document(userID)
         do {
-            try await userDocumentRef.updateData(["fcmToken": token])
-            print("✅ FirestoreService: Successfully updated FCM token for user \(userID).")
+            // Atomically update the fcmToken field.
+            // Using `merge: true` ensures we don't overwrite other user data.
+            try await userDocumentRef.setData(["fcmToken": token], merge: true)
+            print("✅ -[FCM_DEBUG] FirestoreService: Successfully updated FCM token for user \(userID).")
         } catch {
-            print("❌ FirestoreService: Failed to update FCM token for user \(userID): \(error)")
+            print("❌ -[FCM_DEBUG] FirestoreService: Failed to update FCM token for user \(userID): \(error)")
         }
     }
     
