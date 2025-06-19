@@ -89,11 +89,31 @@ class FirestoreService {
             "isFood": sticker.isFood as Any,
             "name": sticker.name as Any,
             "funFact": sticker.funFact as Any,
-            "nutrition": sticker.nutrition as Any,
-            "specialContent": sticker.specialContent as Any
+            "nutrition": sticker.nutrition as Any
         ], merge: true)
         
         print("✅ FirestoreService: Successfully updated sticker \(sticker.id.uuidString) with analysis data.")
+    }
+    
+    /// Updates a user's profile with their onboarding data.
+    /// - Parameters:
+    ///   - userID: The ID of the user to update.
+    ///   - name: The user's name.
+    ///   - age: The user's age.
+    ///   - pronoun: The user's pronouns.
+    ///   - goals: The user's selected goals.
+    func completeOnboarding(for userID: String, name: String, age: Int, pronoun: String, goals: [String]) async throws {
+        let userDocument = db.collection("users").document(userID)
+        
+        try await userDocument.setData([
+            "name": name,
+            "age": age,
+            "pronoun": pronoun,
+            "goals": goals,
+            "onboardingCompleted": true
+        ], merge: true) // merge: true ensures we don't overwrite other fields like jarIDs.
+        
+        print("✅ FirestoreService: Successfully completed onboarding for user \(userID).")
     }
     
     /// Loads all food stickers for a given user from Firestore.

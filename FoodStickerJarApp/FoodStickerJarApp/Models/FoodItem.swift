@@ -25,7 +25,4 @@ struct FoodItem: Identifiable, Codable, Equatable, Hashable {
     
     // A flag to determine if the item has special, rare content.
     var isSpecial: Bool?
-    
-    // A whimsical story or poem, only for special items.
-    var specialContent: String?
 }

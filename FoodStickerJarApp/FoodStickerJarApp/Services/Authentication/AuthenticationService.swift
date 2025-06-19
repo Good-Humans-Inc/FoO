@@ -7,6 +7,8 @@ typealias FirebaseUser = FirebaseAuth.User
 /// A service to manage the user's authentication state with Firebase.
 /// This class listens for changes to the authentication state and provides the current user's info.
 class AuthenticationService: ObservableObject {
+    /// The shared singleton instance.
+    static let shared = AuthenticationService()
     
     // A published property that holds the current Firebase User.
     // Your views can observe this to see if a user is signed in.
@@ -16,7 +18,10 @@ class AuthenticationService: ObservableObject {
     private var authStateHandle: AuthStateDidChangeListenerHandle?
     private let firestoreService = FirestoreService()
     
-    init() {
+    // A reference to the AppStateManager to update the app's flow.
+    private let appState = AppStateManager.shared
+    
+    private init() {
         // When the service is created, start listening for authentication changes.
         addAuthStateListener()
     }
@@ -29,9 +34,38 @@ class AuthenticationService: ObservableObject {
             // Update the published user property.
             self?.user = user
             
-            // If there's no user, it means we need to sign in anonymously.
-            if user == nil {
+            if let user = user {
+                // If we have a user, check their onboarding status.
+                self?.checkOnboardingStatus(for: user.uid)
+            } else {
+                // If there's no user, it means we need to sign in anonymously.
                 self?.signInAnonymously()
+            }
+        }
+    }
+    
+    private func checkOnboardingStatus(for userID: String) {
+        Task {
+            do {
+                // First, ensure a user document exists in the database.
+                // This prevents errors for users created before this feature was added.
+                await firestoreService.checkAndCreateUserDocument(for: userID)
+                
+                // Now, fetch the user profile. This should succeed now.
+                let userProfile = try await firestoreService.fetchUser(with: userID)
+                let isOnboardingCompleted = userProfile.onboardingCompleted ?? false
+                
+                // Update the app state and save the result to UserDefaults.
+                await MainActor.run {
+                    self.appState.setOnboardingStatus(isCompleted: isOnboardingCompleted)
+                }
+            } catch {
+                // If the user document doesn't exist or another error occurs,
+                // we assume they haven't completed onboarding.
+                await MainActor.run {
+                    self.appState.setOnboardingStatus(isCompleted: false)
+                }
+                print("Could not fetch user profile to check onboarding status: \(error)")
             }
         }
     }
