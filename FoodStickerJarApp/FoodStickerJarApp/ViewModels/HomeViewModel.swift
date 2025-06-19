@@ -219,7 +219,16 @@ class HomeViewModel: ObservableObject {
             case .failure(let error):
                 finalItem.isFood = false // If analysis fails, assume it's not food.
                 finalItem.name = "Analysis Failed"
-                print("[HomeViewModel] Food analysis failed: \(error)")
+                print("❌ [HomeViewModel] Food analysis failed. Error: \(error.localizedDescription)")
+                // Log the detailed error for debugging
+                if let analysisError = error as? FoodAnalysisService.AnalysisError {
+                    switch analysisError {
+                    case .decodingError(let decodingError):
+                        print("❌ [HomeViewModel] Decoding Error Details: \(decodingError)")
+                    default:
+                        break // Other errors are already descriptive enough
+                    }
+                }
             }
 
             // 5a. If the item is special, fetch its story.

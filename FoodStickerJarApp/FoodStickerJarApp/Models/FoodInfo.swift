@@ -11,7 +11,7 @@ struct FoodInfo: Codable, Hashable {
     enum CodingKeys: String, CodingKey {
         case isFood = "is_food"
         case name
-        case funFact = "fun_fact"
+        case funFact = "description"
         case nutrition
     }
 } 

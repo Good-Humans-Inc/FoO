@@ -147,6 +147,10 @@ class FoodAnalysisService {
                 let foodInfo = try JSONDecoder().decode(FoodInfo.self, from: data)
                 completion(.success(foodInfo))
             } catch {
+                print("❌ FoodAnalysisService: Failed to decode FoodInfo.")
+                if let decodingError = error as? DecodingError {
+                    print("   - Decoding Error: \(decodingError)")
+                }
                 completion(.failure(.decodingError(error)))
             }
         }.resume()
