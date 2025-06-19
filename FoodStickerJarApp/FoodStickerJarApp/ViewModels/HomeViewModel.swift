@@ -32,6 +32,10 @@ class HomeViewModel: ObservableObject {
     @Published var triggerSnapshot = false
     @Published var newlyGeneratedReport: String?
     
+    // A flag to handle the race condition where the sheet is dismissed before
+    // the sticker's network operations are complete.
+    private var commitIsPending = false
+    
     // MARK: - Services and Engine
     
     // A single, persistent instance of the physics scene. This is crucial
@@ -192,6 +196,12 @@ class HomeViewModel: ObservableObject {
                     self.newSticker?.originalImageURLString = savedItemWithURLs.originalImageURLString
                     self.stickerToCommit = self.newSticker
                 }
+
+                // Now, check if a commit was pending because the sheet was dismissed early.
+                if self.commitIsPending {
+                    print("[HomeViewModel] Commit was pending. Committing now that URLs are available.")
+                    self.commitStickerToJar()
+                }
             }
 
             // 5. Now, await the ANALYSIS task.
@@ -248,8 +258,11 @@ class HomeViewModel: ObservableObject {
             }
 
         } catch {
-            // This 'catch' block will catch errors from the `savingTask`
-            // self.isSavingSticker = false
+            await MainActor.run {
+                stickerCreationError = "Failed to create sticker. Error: \(error.localizedDescription)"
+                // Clean up the temporary state so the user isn't stuck.
+                resetTemporaryState()
+            }
         }
     }
     
@@ -258,27 +271,22 @@ class HomeViewModel: ObservableObject {
     /// view for a new sticker is dismissed.
     func commitNewStickerIfNecessary() {
         // Use the private, safe-guarded copy of the sticker.
-        // If this is nil, it means we weren't in a new-sticker flow, so we do nothing.
-        guard let itemToAdd = stickerToCommit else {
+        guard let item = stickerToCommit else {
             print("[HomeViewModel] commitNewStickerIfNecessary called, but no sticker to commit.")
+            // This can happen if the user dismisses the regular detail view, so we just ignore it.
             return
         }
         
-        print("[HomeViewModel] Committing sticker ID \(itemToAdd.id) to the jar.")
-        // 1. Add the sticker to the main data array.
-        foodItems.append(itemToAdd)
-        
-        // 2. Add the sticker to the physics scene, triggering the animation.
-        jarScene.addSticker(foodItem: itemToAdd, isNew: true)
-        
-        // 3. Clear all temporary state to signify the commit is complete.
-        print("[HomeViewModel] Sticker committed. Clearing all temporary state.")
-        self.newSticker = nil
-        self.stickerToCommit = nil
-
-        // 4. Check if the jar should be auto-archived.
-        Task {
-            await checkForAutoArchive(from: "stickerCommit")
+        // Check if the critical data (the thumbnail URL) is ready.
+        if !item.thumbnailURLString.isEmpty {
+            // Data is ready. We can commit immediately.
+            print("[HomeViewModel] Sticker is ready. Committing immediately.")
+            commitStickerToJar()
+        } else {
+            // Data is not ready because the background task is still running.
+            // Set a flag indicating that as soon as the data is ready, a commit should happen.
+            print("[HomeViewModel] Sticker not ready. Deferring commit.")
+            self.commitIsPending = true
         }
     }
     
@@ -287,6 +295,7 @@ class HomeViewModel: ObservableObject {
     func resetTemporaryState() {
         self.newSticker = nil
         self.stickerToCommit = nil
+        self.commitIsPending = false // Reset the flag
     }
     
     /// Submits user-provided feedback via the FeedbackService.
@@ -406,6 +415,29 @@ class HomeViewModel: ObservableObject {
     }
     
     // MARK: - Private Helper Methods
+    
+    private func commitStickerToJar() {
+        guard let itemToAdd = stickerToCommit else {
+            print("[HomeViewModel] commitStickerToJar called, but no sticker to commit.")
+            return
+        }
+        
+        print("[HomeViewModel] Committing sticker ID \(itemToAdd.id) to the jar.")
+        // 1. Add the sticker to the main data array.
+        foodItems.append(itemToAdd)
+        
+        // 2. Add the sticker to the physics scene, triggering the animation.
+        jarScene.addSticker(foodItem: itemToAdd, isNew: true)
+        
+        // 3. Clear all temporary state to signify the commit is complete.
+        print("[HomeViewModel] Sticker committed. Clearing all temporary state.")
+        resetTemporaryState()
+
+        // 4. Check if the jar should be auto-archived.
+        Task {
+            await checkForAutoArchive(from: "stickerCommit")
+        }
+    }
     
     private func checkForAutoArchive(from source: String) async {
         print("[HomeViewModel] Checking for auto-archive, triggered by: \(source).")

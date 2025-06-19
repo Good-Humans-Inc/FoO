@@ -82,10 +82,10 @@ struct ShelfView: View {
                     // Special view for when there are no jars yet.
                     VStack {
                         Spacer()
-                        Text("Your shelf is empty.")
+                        Text("(°ー°〃) Your shelf is empty.")
                             .font(.title2)
                             .foregroundColor(.secondary)
-                        Text("Archive a jar to see it here!")
+                        Text("A jar will show up here when it's archived!")
                             .font(.body)
                             .foregroundColor(.secondary)
                         Spacer()
