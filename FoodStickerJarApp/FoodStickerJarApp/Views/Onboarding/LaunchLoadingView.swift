@@ -9,7 +9,7 @@ struct LaunchLoadingView: View {
             Color.themeBackground
                 .ignoresSafeArea()
             
-            Image("LogoIcon")
+            Image("logoIcon")
                 .resizable()
                 .scaledToFit()
                 .frame(width: 120, height: 120)

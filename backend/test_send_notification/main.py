@@ -48,12 +48,18 @@ def test_send_notification(request):
 
     print(f"--- [FCM_DEBUG] Preparing to send notification with Title='{title}' and Body='{body}'")
 
+    # APNS-specific configuration to set the app icon badge.
+    apns_payload = messaging.APNSPayload(
+        aps=messaging.Aps(badge=1)
+    )
+
     message = messaging.MulticastMessage(
         notification=messaging.Notification(
             title=title,
             body=body
         ),
         tokens=tokens,
+        apns=messaging.APNSConfig(payload=apns_payload)
     )
 
     try:
@@ -85,6 +91,7 @@ def test_send_notification(request):
             single_message = messaging.Message(
                 notification=messaging.Notification(title=title, body=body),
                 token=token,
+                apns=messaging.APNSConfig(payload=apns_payload)
             )
             try:
                 messaging.send(single_message)

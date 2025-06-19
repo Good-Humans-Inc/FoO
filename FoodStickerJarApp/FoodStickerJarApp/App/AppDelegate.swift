@@ -39,6 +39,12 @@ class AppDelegate: NSObject, UIApplicationDelegate {
         return true
     }
     
+    func applicationDidBecomeActive(_ application: UIApplication) {
+        // Clear the app icon badge number when the app becomes active.
+        UIApplication.shared.applicationIconBadgeNumber = 0
+        print("-[FCM_DEBUG] App became active. Cleared application badge number.")
+    }
+    
     func application(_ application: UIApplication, didReceiveRemoteNotification userInfo: [AnyHashable: Any],
                      fetchCompletionHandler completionHandler: @escaping (UIBackgroundFetchResult) -> Void) {
         
