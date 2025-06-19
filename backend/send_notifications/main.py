@@ -1,37 +1,65 @@
 import firebase_admin
 from firebase_admin import credentials, firestore, messaging
 import functions_framework
+from datetime import datetime
+from zoneinfo import ZoneInfo, available_timezones
 
 # Initialize Firebase Admin SDK
 # In a Google Cloud environment, the SDK can automatically find the service account credentials.
 firebase_admin.initialize_app()
 
+TARGET_HOURS = [7, 11, 17]  # 7am, 11am, 5pm
+
 @functions_framework.http
 def send_daily_notification(request):
     """
-    An HTTP-triggered Cloud Function that sends a push notification
-    to all users who have a valid FCM token.
+    An HTTP-triggered Cloud Function that sends push notifications to users
+    based on their local time. It's designed to be run hourly.
     """
     db = firestore.client()
     
-    # 1. Fetch all FCM tokens from the 'users' collection in Firestore.
-    tokens = []
-    users_ref = db.collection('users')
-    docs = users_ref.stream()
+    # 1. Determine the current hour in UTC.
+    utc_now = datetime.utcnow()
     
-    for doc in docs:
-        user_data = doc.to_dict()
-        if 'fcmToken' in user_data and user_data['fcmToken']:
-            tokens.append(user_data['fcmToken'])
+    # 2. Find all timezones where the current hour matches one of our target hours.
+    target_timezones = []
+    for tz_name in available_timezones():
+        try:
+            local_time = utc_now.astimezone(ZoneInfo(tz_name))
+            if local_time.hour in TARGET_HOURS:
+                target_timezones.append(tz_name)
+        except Exception as e:
+            # Some timezones in the list might be invalid or aliases, so we ignore them.
+            print(f"Could not process timezone {tz_name}: {e}")
+            continue
+            
+    if not target_timezones:
+        print(f"No timezones match the current UTC hour: {utc_now.hour}. No notifications will be sent.")
+        return "No target timezones for this hour.", 200
+
+    print(f"Found {len(target_timezones)} timezones matching target hours. Querying for users.")
+
+    # 3. Fetch all users who are in one of the target timezones.
+    # Firestore 'in' query is limited to 30 elements, so we must batch the query.
+    tokens = []
+    # Split target_timezones into chunks of 30
+    for i in range(0, len(target_timezones), 30):
+        chunk = target_timezones[i:i + 30]
+        users_ref = db.collection('users').where('timezone', 'in', chunk)
+        docs = users_ref.stream()
+        
+        for doc in docs:
+            user_data = doc.to_dict()
+            if 'fcmToken' in user_data and user_data['fcmToken']:
+                tokens.append(user_data['fcmToken'])
             
     if not tokens:
-        print("No FCM tokens found. No notifications will be sent.")
-        return "No FCM tokens found.", 200
+        print("No FCM tokens found for users in the target timezones. No notifications sent.")
+        return "No FCM tokens found for users in target timezones.", 200
 
     print(f"Found {len(tokens)} tokens to send notifications to.")
 
-    # 2. Construct the notification message.
-    # You can customize the title and body as you like.
+    # 4. Construct and send the notification message.
     message = messaging.MulticastMessage(
         notification=messaging.Notification(
             title='Food Sticker Jar',
@@ -40,13 +68,12 @@ def send_daily_notification(request):
         tokens=tokens,
     )
 
-    # 3. Send the notifications.
     try:
         batch_response = messaging.send_multicast(message)
         print(f"Successfully sent {batch_response.success_count} messages.")
         if batch_response.failure_count > 0:
             print(f"Failed to send {batch_response.failure_count} messages.")
-            # You can inspect batch_response.responses for more details on failures.
+            # Clean up invalid tokens in a real-world app
             
         return f"Notifications sent: {batch_response.success_count} successful, {batch_response.failure_count} failed.", 200
         
