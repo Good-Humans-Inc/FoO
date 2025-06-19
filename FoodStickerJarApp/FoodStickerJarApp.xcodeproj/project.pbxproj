@@ -20,6 +20,7 @@
 		2C3C4D412DFCBFEC005E2C14 /* FirebaseFirestoreCombine-Community in Frameworks */ = {isa = PBXBuildFile; productRef = 2C3C4D402DFCBFEC005E2C14 /* FirebaseFirestoreCombine-Community */; };
 		2C3C4D432DFCBFEC005E2C14 /* FirebaseFunctions in Frameworks */ = {isa = PBXBuildFile; productRef = 2C3C4D422DFCBFEC005E2C14 /* FirebaseFunctions */; };
 		2C3C4D452DFCBFEC005E2C14 /* FirebaseVertexAI in Frameworks */ = {isa = PBXBuildFile; productRef = 2C3C4D442DFCBFEC005E2C14 /* FirebaseVertexAI */; };
+		2C49A1832E049C9200256CEA /* FirebaseMessaging in Frameworks */ = {isa = PBXBuildFile; productRef = 2C49A1822E049C9200256CEA /* FirebaseMessaging */; };
 		2C7E99832DFE8262002E2A07 /* Kingfisher in Frameworks */ = {isa = PBXBuildFile; productRef = 2C7E99822DFE8262002E2A07 /* Kingfisher */; };
 		2C7E99BE2DFE8320002E2A07 /* FirebaseStorage in Frameworks */ = {isa = PBXBuildFile; productRef = 2C7E99BD2DFE8320002E2A07 /* FirebaseStorage */; };
 /* End PBXBuildFile section */
@@ -41,6 +42,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				2C49A1832E049C9200256CEA /* FirebaseMessaging in Frameworks */,
 				2C3C4D332DFCBFEC005E2C14 /* FirebaseAnalyticsIdentitySupport in Frameworks */,
 				2C3C4D372DFCBFEC005E2C14 /* FirebaseAuthCombine-Community in Frameworks */,
 				2C7E99832DFE8262002E2A07 /* Kingfisher in Frameworks */,
@@ -113,6 +115,7 @@
 				2C3C4D442DFCBFEC005E2C14 /* FirebaseVertexAI */,
 				2C7E99822DFE8262002E2A07 /* Kingfisher */,
 				2C7E99BD2DFE8320002E2A07 /* FirebaseStorage */,
+				2C49A1822E049C9200256CEA /* FirebaseMessaging */,
 			);
 			productName = FoodStickerJarApp;
 			productReference = 2C3C4B932DFB72F5005E2C14 /* FoodStickerJarApp.app */;
@@ -307,9 +310,10 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_ENTITLEMENTS = FoodStickerJarApp/FoodStickerJarApp.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
-				DEVELOPMENT_TEAM = H88ZJM23HW;
+				DEVELOPMENT_TEAM = 2MLHSW6S86;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = "";
@@ -340,9 +344,10 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_ENTITLEMENTS = FoodStickerJarApp/FoodStickerJarApp.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
-				DEVELOPMENT_TEAM = H88ZJM23HW;
+				DEVELOPMENT_TEAM = 2MLHSW6S86;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = "";
@@ -473,6 +478,11 @@
 			isa = XCSwiftPackageProductDependency;
 			package = 2C3C4D2B2DFCBFEC005E2C14 /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */;
 			productName = FirebaseVertexAI;
+		};
+		2C49A1822E049C9200256CEA /* FirebaseMessaging */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 2C3C4D2B2DFCBFEC005E2C14 /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */;
+			productName = FirebaseMessaging;
 		};
 		2C7E99822DFE8262002E2A07 /* Kingfisher */ = {
 			isa = XCSwiftPackageProductDependency;

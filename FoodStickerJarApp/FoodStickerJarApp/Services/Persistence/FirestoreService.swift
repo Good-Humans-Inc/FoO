@@ -239,6 +239,20 @@ class FirestoreService {
         return user
     }
     
+    /// Updates the user's document with their FCM token for push notifications.
+    /// - Parameters:
+    ///   - userID: The ID of the user to update.
+    ///   - token: The FCM registration token.
+    func updateUserFCMToken(for userID: String, token: String) async {
+        let userDocumentRef = db.collection("users").document(userID)
+        do {
+            try await userDocumentRef.updateData(["fcmToken": token])
+            print("✅ FirestoreService: Successfully updated FCM token for user \(userID).")
+        } catch {
+            print("❌ FirestoreService: Failed to update FCM token for user \(userID): \(error)")
+        }
+    }
+    
     /// Fetches a collection of stickers for a given user from Firestore based on their IDs.
     /// - Parameters:
     ///   - ids: An array of sticker document IDs to fetch.
