@@ -16,7 +16,7 @@ struct SpecialStickerInfoView: View {
                     + Text("rare")
                         .bold()
                         .foregroundColor(.themeAccent)
-                    + Text(". These special stickers have a unique holographic look and unlock a fun story or poem just for you."))
+                    + Text(". These special stickers have a unique holographic look and unlock a fun story just for you."))
                     .font(.body)
                     .foregroundColor(.secondary)
                     .multilineTextAlignment(.center)
@@ -24,27 +24,25 @@ struct SpecialStickerInfoView: View {
                 // Visual comparison of stickers
                 HStack(spacing: 30) {
                     VStack {
-                        Image(systemName: "face.smiling.fill")
+                        Image("normalToastSticker")
                             .resizable()
                             .scaledToFit()
-                            .frame(width: 80, height: 80)
-                            .foregroundColor(.gray)
+                            .frame(width: 100, height: 100)
                         Text("Normal")
                             .font(.headline)
                     }
                     
                     VStack {
-                        Image(systemName: "sparkles")
+                        Image("rareToastSticker")
                             .resizable()
                             .scaledToFit()
-                            .frame(width: 80, height: 80)
-                            .foregroundColor(.themeAccent)
+                            .frame(width: 100, height: 100)
                         Text("Rare!")
                             .font(.headline)
                     }
                 }
                 
-                Text("There's currently a \(Int(AppConfig.specialItemProbability * 100))% chance for each sticker!")
+                Text("There's a \(Int(AppConfig.specialItemProbability * 100))% chance for each sticker to be rare!")
                     .font(.caption)
                     .foregroundColor(.secondary)
             }

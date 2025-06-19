@@ -6,10 +6,10 @@ struct IntroCarouselView: View {
 
     // The data for the carousel pages.
     private let pages: [IntroPage] = [
-        .init(imageName: "camera.fill", headline: "Snap a food memory.", subheadline: "Turn any meal into a cute sticker."),
-        .init(imageName: "sparkles", headline: "Collect your moments.", subheadline: "Fill your jar and see your habits in a new light."),
-        .init(imageName: "heart.text.square.fill", headline: "Mindful, not meticulous.", subheadline: "It's about celebrating your journey, not counting calories."),
-        .init(imageName: "person.3.fill", headline: "Made with ❤️ by...", subheadline: "An all-female team dedicated to joyful wellness.")
+        .init(imageName: "camera.fill", headline: "Snap your food", subheadline: "Turn any meal or snack into a cute sticker."),
+        .init(imageName: "sparkles", headline: "Collect your moments", subheadline: "Fill your jar and see your food journey in a new light."),
+        .init(imageName: "heart.text.square.fill", headline: "Mindful, not meticulous", subheadline: "You won't find calorie math here. Only a healthy, sustainable relationship with food built on mindfulness, positivity, and curiosity."),
+        .init(imageName: "person.3.fill", headline: "Made with ❤️ by two friends", subheadline: "We couldn't find a food app that celebrates every bite, so we built our own.")
     ]
 
     // The index of the currently displayed page.
@@ -22,8 +22,14 @@ struct IntroCarouselView: View {
             // The swipeable tab view for the carousel pages.
             TabView(selection: $currentPageIndex) {
                 ForEach(pages.indices, id: \.self) { index in
-                    IntroPageView(page: pages[index])
-                        .tag(index)
+                    // Use a special layout for the final "founders" page.
+                    if index == pages.count - 1 {
+                        FoundersIntroView(page: pages[index])
+                            .tag(index)
+                    } else {
+                        IntroPageView(page: pages[index])
+                            .tag(index)
+                    }
                 }
             }
             .tabViewStyle(.page(indexDisplayMode: .always))
@@ -57,6 +63,39 @@ struct IntroCarouselView: View {
             // If it is the last page, call the onContinue closure.
             onContinue()
         }
+    }
+}
+
+/// A special view for the final "founders" page of the intro carousel.
+private struct FoundersIntroView: View {
+    let page: IntroPage
+    
+    var body: some View {
+        VStack(spacing: 20) {
+            // Display the two founder stickers side-by-side.
+            HStack {
+                Image("lanruoSticker")
+                    .resizable()
+                    .scaledToFit()
+                    .frame(width: 150)
+                
+                Image("yanSticker")
+                    .resizable()
+                    .scaledToFit()
+                    .frame(width: 150)
+            }
+            .padding(.bottom, 30)
+
+            Text(page.headline)
+                .font(.system(size: 28, weight: .bold, design: .serif))
+                .multilineTextAlignment(.center)
+
+            Text(page.subheadline)
+                .font(.body)
+                .foregroundColor(.secondary)
+                .multilineTextAlignment(.center)
+        }
+        .padding(.horizontal, 40)
     }
 }
 
