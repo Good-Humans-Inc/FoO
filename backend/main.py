@@ -93,3 +93,67 @@ If you don't know the answer for a particular key or you cannot identify the obj
             "nutrition": "Please try again."
         }
         return (json.dumps(error_payload), 500, headers) 
+
+@functions_framework.http
+def generate_special_content(request):
+    """
+    HTTP Cloud Function to generate a whimsical story for a given food name.
+    Expects a JSON payload with a "name" key.
+    """
+    # Initialize Vertex AI
+    try:
+        vertexai.init(project=PROJECT_ID, location=LOCATION)
+    except Exception as e:
+        return (json.dumps({"error": f"Vertex AI initialization failed: {e}"}), 500, {'Access-Control-Allow-Origin': '*'})
+
+    # Handle CORS preflight requests
+    if request.method == 'OPTIONS':
+        headers = {
+            'Access-Control-Allow-Origin': '*',
+            'Access-Control-Allow-Methods': 'POST',
+            'Access-Control-Allow-Headers': 'Content-Type',
+            'Access-Control-Max-Age': '3600'
+        }
+        return ('', 204, headers)
+
+    headers = { 'Access-Control-Allow-Origin': '*' }
+
+    # Parse and validate the request
+    request_json = request.get_json(silent=True)
+    if not request_json or 'name' not in request_json:
+        return (json.dumps({"error": "Invalid request. Missing 'name' key."}), 400, headers)
+
+    food_name = request_json['name']
+
+    # Prepare the prompt for Gemini
+    model = GenerativeModel("gemini-1.5-flash-001")
+    
+    prompt = f"""
+You are a master storyteller for a children's game.
+A child has just discovered a special, rare food item: a {food_name}.
+Write a very short, whimsical, and imaginative origin story for this specific {food_name}. (Max 2-3 sentences).
+Make it sound magical and unique. Do not use markdown or any special formatting. Just return the plain text of the story.
+
+Example for "Broccoli":
+"This isn't just any broccoli! It's a tiny tree from the Whispering Woods, where gnomes hang tiny lanterns from its branches."
+
+Example for "Cheese":
+"This piece of cheese was nibbled from a moon made of delicious dairy, delivered to Earth by a friendly cow-shaped spaceship."
+"""
+
+    try:
+        # Generate the content
+        response = model.generate_content(prompt)
+        
+        # Clean up the response text
+        story = response.text.strip().replace('"', '')
+        
+        # Return the story in a JSON object
+        return (json.dumps({"special_content": story}), 200, headers)
+
+    except Exception as e:
+        # Handle errors during generation
+        error_payload = {
+            "special_content": f"The story of this {food_name} is still being written... (Error: {e})"
+        }
+        return (json.dumps(error_payload), 500, headers) 

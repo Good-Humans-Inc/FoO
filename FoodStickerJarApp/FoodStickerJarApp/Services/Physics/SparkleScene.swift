@@ -4,11 +4,13 @@ class SparkleScene: SKScene {
     
     private var background: UIImage
     private var completion: () -> Void
+    private var isSpecial: Bool
     
     private var emitter: SKEmitterNode?
 
-    init(size: CGSize, background: UIImage, completion: @escaping () -> Void) {
+    init(size: CGSize, background: UIImage, isSpecial: Bool, completion: @escaping () -> Void) {
         self.background = background
+        self.isSpecial = isSpecial
         self.completion = completion
         super.init(size: size)
     }
@@ -29,10 +31,28 @@ class SparkleScene: SKScene {
         // Create and configure the particle emitter
         let sparkleEmitter = SKEmitterNode()
         sparkleEmitter.particleTexture = SKTexture(imageNamed: "spark") // We will need a 'spark.png' asset
-        sparkleEmitter.particleBirthRate = 800
-        sparkleEmitter.particleLifetime = 2.0
-        sparkleEmitter.particleLifetimeRange = 0.5
         
+        // --- Customization for Special vs. Normal Items ---
+        if isSpecial {
+            // A more intense, golden-orange burst for special items
+            sparkleEmitter.particleBirthRate = 2000
+            sparkleEmitter.particleLifetime = 2.5
+            sparkleEmitter.particleSpeed = 200
+            sparkleEmitter.particleScale = 0.3
+            sparkleEmitter.particleColor = UIColor(red: 1.0, green: 0.8, blue: 0.4, alpha: 1.0)
+            sparkleEmitter.particleColorBlendFactor = 1.0
+            sparkleEmitter.particleBlendMode = .add
+        } else {
+            // The standard, gentler sparkle effect
+            sparkleEmitter.particleBirthRate = 800
+            sparkleEmitter.particleLifetime = 2.0
+            sparkleEmitter.particleScale = 0.2
+            sparkleEmitter.particleColor = .white
+            sparkleEmitter.particleColorBlendFactor = 0 // Use the texture's color
+            sparkleEmitter.particleBlendMode = .screen
+        }
+        
+        sparkleEmitter.particleLifetimeRange = 0.5
         sparkleEmitter.particlePositionRange = CGVector(dx: size.width, dy: size.height)
         
         sparkleEmitter.emissionAngle = .pi
@@ -41,17 +61,12 @@ class SparkleScene: SKScene {
         sparkleEmitter.particleSpeed = 150
         sparkleEmitter.particleSpeedRange = 50
         
-        sparkleEmitter.particleScale = 0.2
         sparkleEmitter.particleScaleRange = 0.1
         sparkleEmitter.particleScaleSpeed = -0.1
         
         sparkleEmitter.particleAlpha = 0.8
         sparkleEmitter.particleAlphaRange = 0.2
         sparkleEmitter.particleAlphaSpeed = -0.5
-
-        sparkleEmitter.particleColorBlendFactor = 1.0
-        sparkleEmitter.particleColor = UIColor(red: 0.9, green: 0.8, blue: 0.4, alpha: 1.0) // A warm, golden sparkle
-        sparkleEmitter.particleBlendMode = .add // Additive blending for a bright, glowing effect
         
         self.emitter = sparkleEmitter
         
@@ -69,7 +84,9 @@ class SparkleScene: SKScene {
         }
         
         // Wait for particles to die out, then call completion
-        let waitAction = SKAction.wait(forDuration: 2.5) // particleLifetime + buffer
+        // Use a longer wait for the more intense special animation
+        let waitDuration = isSpecial ? 3.0 : 2.5
+        let waitAction = SKAction.wait(forDuration: waitDuration)
         let completionAction = SKAction.run(completion)
         
         run(SKAction.sequence([stopEmittingAction, waitAction, completionAction]))

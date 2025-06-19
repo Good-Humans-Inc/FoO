@@ -81,4 +81,42 @@ class HapticManager {
             print("Failed to play custom haptic pattern: \(error)")
         }
     }
+    
+    /// Plays a short, sharp, and celebratory haptic pattern for special reveals.
+    func playSpecialReveal() {
+        guard let engine = engine else { return }
+
+        // 1. A very sharp, intense tap.
+        let intensity1 = CHHapticEventParameter(parameterID: .hapticIntensity, value: 1.0)
+        let sharpness1 = CHHapticEventParameter(parameterID: .hapticSharpness, value: 1.0)
+        let event1 = CHHapticEvent(eventType: .hapticTransient, parameters: [intensity1, sharpness1], relativeTime: 0)
+
+        // 2. A softer, fading rumble immediately after.
+        let intensity2 = CHHapticEventParameter(parameterID: .hapticIntensity, value: 0.6)
+        let sharpness2 = CHHapticEventParameter(parameterID: .hapticSharpness, value: 0.3)
+        let event2 = CHHapticEvent(
+            eventType: .hapticContinuous,
+            parameters: [intensity2, sharpness2],
+            relativeTime: 0.05, // Starts just after the first tap
+            duration: 0.5
+        )
+        
+        // 3. A parameter curve to make the rumble fade out.
+        let intensityCurve = CHHapticParameterCurve(
+            parameterID: .hapticIntensityControl,
+            controlPoints: [
+                .init(relativeTime: 0, value: 0.6),
+                .init(relativeTime: 0.5, value: 0)
+            ],
+            relativeTime: 0.05 // Apply this curve to the continuous event
+        )
+        
+        do {
+            let pattern = try CHHapticPattern(events: [event1, event2], parameterCurves: [intensityCurve])
+            let player = try engine.makePlayer(with: pattern)
+            try player.start(atTime: 0)
+        } catch {
+            print("Failed to play special reveal haptic pattern: \(error)")
+        }
+    }
 }

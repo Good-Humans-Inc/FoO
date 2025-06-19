@@ -4,6 +4,10 @@ import FirebaseFirestore
 /// A service dedicated to handling all Firestore database operations.
 class FirestoreService {
     
+    // --- CONFIGURATION ---
+    // The probability (0.0 to 1.0) that a newly created sticker will be "special".
+    private let specialItemProbability: Double = 0.5 // 50%
+    
     // Get a reference to the Firestore database.
     private let db = Firestore.firestore()
     // The service for handling file uploads.
@@ -19,6 +23,9 @@ class FirestoreService {
     func createSticker(originalImage: UIImage, stickerImage: UIImage, for userID: String) async throws -> FoodItem {
         let stickerID = UUID()
         let creationDate = Date()
+        
+        // Determine if this item will be special based on the configured probability.
+        let isSpecial = Double.random(in: 0...1) < specialItemProbability
         
         // Prepare image data for sticker and thumbnail.
         guard let stickerImageData = stickerImage.pngData() else {
@@ -55,9 +62,11 @@ class FirestoreService {
             imageURLString: finalImageURL.absoluteString,
             thumbnailURLString: finalThumbnailURL.absoluteString,
             originalImageURLString: finalOriginalPhotoURL.absoluteString,
+            isFood: nil,
             name: nil,
             funFact: nil,
-            nutrition: nil
+            nutrition: nil,
+            isSpecial: isSpecial
         )
         
         // Save the metadata object to Firestore.
@@ -82,7 +91,8 @@ class FirestoreService {
             "isFood": sticker.isFood as Any,
             "name": sticker.name as Any,
             "funFact": sticker.funFact as Any,
-            "nutrition": sticker.nutrition as Any
+            "nutrition": sticker.nutrition as Any,
+            "specialContent": sticker.specialContent as Any
         ], merge: true)
         
         print("✅ FirestoreService: Successfully updated sticker \(sticker.id.uuidString) with analysis data.")

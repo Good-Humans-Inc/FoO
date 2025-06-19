@@ -24,6 +24,8 @@ struct StickerCreationView: View {
     @State private var backgroundImage: UIImage?
     // The scene for the sparkle effect, stored in state to prevent re-creation.
     @State private var sparkleScene: SparkleScene?
+    // The haptic feedback manager.
+    @State private var hapticManager = HapticManager()
 
     var body: some View {
         ZStack {
@@ -86,8 +88,16 @@ struct StickerCreationView: View {
         
         // If we fail to create the mask, skip to the end.
         if let bg = backgroundImage {
+            // Check if the new sticker is special. Default to 'false' if it's somehow nil.
+            let isSpecial = viewModel.newSticker?.isSpecial ?? false
+            
+            // If it's a special item, play the celebratory haptic.
+            if isSpecial {
+                hapticManager?.playSpecialReveal()
+            }
+            
             // Create the scene once.
-            self.sparkleScene = SparkleScene(size: size, background: bg) {
+            self.sparkleScene = SparkleScene(size: size, background: bg, isSpecial: isSpecial) {
                 // This completion is called when the sparkle animation ends.
                 withAnimation(.spring(response: 0.6, dampingFraction: 0.8)) {
                     print("[StickerCreationView] Sparkle animation finished. Switching to .detailView state.")

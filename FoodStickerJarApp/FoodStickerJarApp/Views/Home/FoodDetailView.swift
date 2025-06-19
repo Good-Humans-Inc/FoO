@@ -144,6 +144,14 @@ struct FoodDetailView: View {
                                 ProgressView()
                                     .padding(.top)
                             }
+                            
+                            // --- SPECIAL CONTENT SECTION ---
+                            // This section only appears if the item is marked as special.
+                            if foodItem.isSpecial == true {
+                                Divider()
+                                SpecialContentView(content: foodItem.specialContent)
+                                    .padding(.top, 10)
+                            }
                         }
                         .padding(.horizontal, 30)
                         .padding(.bottom) // Add some space at the very end of the scrollable content
@@ -152,7 +160,13 @@ struct FoodDetailView: View {
                     }
                 }
             }
-            .background(Color(.systemGray6).ignoresSafeArea())
+            .background(
+                // Use a different background for special items.
+                (foodItem.isSpecial == true) ?
+                LinearGradient(gradient: Gradient(colors: [Color(red: 1.0, green: 0.98, blue: 0.85), Color(red: 1.0, green: 0.9, blue: 0.8)]), startPoint: .topLeading, endPoint: .bottomTrailing) :
+                LinearGradient(gradient: Gradient(colors: [Color(.systemGray6)]), startPoint: .top, endPoint: .bottom)
+            )
+            .ignoresSafeArea()
             .onAppear {
                 // If this view is part of a hero transition, delay the content appearance.
                 if namespace != nil {
@@ -169,6 +183,38 @@ struct FoodDetailView: View {
             // This ProgressView is shown if the item becomes nil, preventing the crash.
             ProgressView()
         }
+    }
+}
+
+/// A helper view for displaying the exclusive content for a "special" food item.
+private struct SpecialContentView: View {
+    let content: String?
+    
+    var body: some View {
+        VStack(alignment: .leading, spacing: 16) {
+            HStack {
+                Image(systemName: "sparkles")
+                    .foregroundColor(.orange)
+                Text("A Rare Find!")
+                    .font(.headline)
+                    .foregroundColor(.secondary)
+            }
+            
+            if let content = content {
+                // If we have the content, display it.
+                Text(content)
+                    .font(.custom("Georgia", size: 17))
+            } else {
+                // If content is nil, it's still loading.
+                HStack(spacing: 10) {
+                    ProgressView()
+                    Text("Unraveling its story...")
+                        .font(.custom("Georgia-Italic", size: 16))
+                        .foregroundColor(.secondary)
+                }
+            }
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
     }
 }
 

@@ -149,7 +149,21 @@ class HomeViewModel: ObservableObject {
                 print("[HomeViewModel] Food analysis failed: \(error)")
             }
 
-            // 6. Save the analysis data to Firestore.
+            // 5a. If the item is special, fetch its story.
+            if updatedItem.isSpecial == true, let name = updatedItem.name, name != "N/A", name != "???" {
+                print("[HomeViewModel] Item is special. Fetching story for \(name)...")
+                let contentResult = await analysisService.fetchSpecialContent(for: name)
+                if case .success(let story) = contentResult {
+                    updatedItem.specialContent = story
+                    print("[HomeViewModel] Special content received.")
+                } else {
+                    print("[HomeViewModel] Failed to fetch special content.")
+                    // Set a default story on failure so the UI doesn't just show a spinner.
+                    updatedItem.specialContent = "The story of this wondrous item is a tale for another time."
+                }
+            }
+
+            // 6. Save the analysis data (and any special content) to Firestore.
             print("[HomeViewModel] Saving analysis data to Firestore...")
             try await firestoreService.updateSticker(updatedItem, for: userId)
             
@@ -196,9 +210,10 @@ class HomeViewModel: ObservableObject {
         // 2. Add the sticker to the physics scene, triggering the animation.
         jarScene.addSticker(item: itemToAdd)
         
-        // 3. Clear the temporary item to signify the commit is complete.
-        print("[HomeViewModel] Sticker committed. Clearing temporary item.")
+        // 3. Clear all temporary state to signify the commit is complete.
+        print("[HomeViewModel] Sticker committed. Clearing all temporary state.")
         stickerToCommit = nil
+        newSticker = nil
     }
     
     // MARK: - Private Methods
