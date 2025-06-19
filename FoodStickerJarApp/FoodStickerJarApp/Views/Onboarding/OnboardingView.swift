@@ -20,6 +20,9 @@ struct OnboardingView: View {
     // The current step in the onboarding flow.
     @State private var currentStep: OnboardingStep = .welcome
     
+    // A flag to show a loading indicator while saving.
+    @State private var isSaving = false
+    
     var body: some View {
         ZStack {
             // A background for the entire onboarding flow.
@@ -52,14 +55,47 @@ struct OnboardingView: View {
                 }
                 .transition(.asymmetric(insertion: .move(edge: .trailing), removal: .move(edge: .leading)))
                 
-            default:
-                // A single placeholder for all subsequent steps.
-                VStack {
-                    Text("Placeholder for: \(String(describing: currentStep))")
-                    Button("Finish Onboarding (Temporary)") {
-                        onComplete()
+            case .pronoun:
+                PronounInputView(pronoun: $viewModel.pronoun) {
+                    withAnimation { currentStep = .goals }
+                }
+                .transition(.asymmetric(insertion: .move(edge: .trailing), removal: .move(edge: .leading)))
+                
+            case .goals:
+                GoalsInputView(goals: $viewModel.goals) {
+                    withAnimation { currentStep = .specialStickers }
+                }
+                .transition(.asymmetric(insertion: .move(edge: .trailing), removal: .move(edge: .leading)))
+                
+            case .specialStickers:
+                SpecialStickerInfoView {
+                    Task {
+                        isSaving = true
+                        do {
+                            try await viewModel.completeOnboarding()
+                            // The onComplete closure will trigger the AppState to change,
+                            // which dismisses the onboarding view.
+                            onComplete()
+                        } catch {
+                            // In a real app, you would show an error alert to the user.
+                            print("Error completing onboarding: \(error.localizedDescription)")
+                            isSaving = false
+                        }
                     }
                 }
+                .transition(.asymmetric(insertion: .move(edge: .trailing), removal: .move(edge: .leading)))
+                
+            default:
+                // An empty view for any unimplemented cases.
+                EmptyView()
+            }
+            
+            // Show a loading overlay if we are saving.
+            if isSaving {
+                Color.black.opacity(0.4).ignoresSafeArea()
+                ProgressView()
+                    .progressViewStyle(CircularProgressViewStyle(tint: .white))
+                    .scaleEffect(2)
             }
         }
     }

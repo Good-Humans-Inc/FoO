@@ -3,6 +3,9 @@ import SwiftUI
 struct NameInputView: View {
     @Binding var name: String
     var onNext: () -> Void
+    
+    // A state to programmatically control keyboard focus.
+    @FocusState private var isTextFieldFocused: Bool
 
     var body: some View {
         VStack(spacing: 20) {
@@ -20,6 +23,8 @@ struct NameInputView: View {
                     .cornerRadius(12)
                     .multilineTextAlignment(.center)
                     .submitLabel(.done)
+                    // Bind the text field's focus to our state variable.
+                    .focused($isTextFieldFocused)
             }
             
             Spacer()
@@ -40,6 +45,13 @@ struct NameInputView: View {
         }
         .padding(.horizontal, 40)
         .padding(.bottom, 50)
+        .onAppear {
+            // After a short delay to allow the view transition to complete,
+            // automatically focus the text field to bring up the keyboard.
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+                isTextFieldFocused = true
+            }
+        }
     }
 }
 
