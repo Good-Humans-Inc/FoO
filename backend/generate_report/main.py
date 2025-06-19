@@ -5,8 +5,7 @@
 from firebase_functions import https_fn, options
 
 # The Firebase Admin SDK to access Cloud Firestore.
-from firebase_admin import initialize_app, firestore
-import google.cloud.firestore
+from firebase_admin import initialize_app
 import vertexai
 from vertexai.generative_models import GenerativeModel
 
@@ -18,9 +17,15 @@ def generate_report(req: https_fn.Request) -> https_fn.Response:
     """
     Takes a list of food items and generates a nutritional report using the Gemini API.
     """
+    # 1. Check for authentication
+    if req.auth is None:
+        raise https_fn.HttpsError(
+            code=https_fn.FunctionsErrorCode.UNAUTHENTICATED,
+            message="The function must be called while authenticated.",
+        )
+        
     try:
-        # 1. Extract data from the request
-        # Expects a JSON payload like: {"data": {"foodItems": [{"name": "Apple", "nutrition": "..."}]}}
+        # 2. Extract data from the request
         food_items = req.data.get("foodItems")
         if not food_items:
             raise https_fn.HttpsError(
@@ -28,12 +33,11 @@ def generate_report(req: https_fn.Request) -> https_fn.Response:
                 message="Missing 'foodItems' in request payload.",
             )
 
-        # 2. Initialize the Vertex AI client
+        # 3. Initialize the Vertex AI client
         vertexai.init(project="foodjar-462805", location="us-central1")
-        model = GenerativeModel(model_name="gemini-1.5-flash-001")
+        model = GenerativeModel(model_name="gemini-2.0-flash")
 
-        # 3. Construct the prompt for Gemini
-        # We create a simple summary of the food names to pass to the model.
+        # 4. Construct the prompt for Gemini
         food_titles = [item.get("name", "Unknown Food") for item in food_items]
         nutrition_details = [item.get("nutrition", "") for item in food_items]
         
@@ -55,11 +59,11 @@ def generate_report(req: https_fn.Request) -> https_fn.Response:
         Keep the tone light, positive, and non-judgmental. Start the report with a friendly greeting like "Here's your weekly food recap!".
         """
 
-        # 4. Generate content using the Gemini API
+        # 5. Generate content using the Gemini API
         response = model.generate_content(prompt)
         report_text = response.text
 
-        # 5. Return the generated report
+        # 6. Return the generated report
         return https_fn.Response(report_text)
 
     except Exception as e:
