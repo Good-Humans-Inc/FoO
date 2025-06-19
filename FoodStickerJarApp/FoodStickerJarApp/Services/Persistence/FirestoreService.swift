@@ -6,9 +6,7 @@ class FirestoreService {
     
     // --- CONFIGURATION ---
     // The probability (0.0 to 1.0) that a newly created sticker will be "special".
-    private let specialItemProbability: Double = 0.5 // 50%
-    
-    // Get a reference to the Firestore database.
+    // A reference to the Firestore database.
     private let db = Firestore.firestore()
     // The service for handling file uploads.
     private let storageService = FirebaseStorageService()
@@ -16,16 +14,16 @@ class FirestoreService {
     /// Creates a new food sticker by first uploading its images to Firebase Storage
     /// and then saving the resulting URL metadata to Firestore.
     /// - Parameters:
+    ///   - id: The ID of the sticker being created.
     ///   - originalImage: The original `UIImage` from the camera.
     ///   - stickerImage: The sticker `UIImage` to be processed and saved.
     ///   - userID: The ID of the currently authenticated user.
+    ///   - isSpecial: A boolean indicating if the sticker should be marked as special.
     /// - Returns: The fully constructed `FoodItem` with URLs pointing to the stored images.
-    func createSticker(originalImage: UIImage, stickerImage: UIImage, for userID: String) async throws -> FoodItem {
-        let stickerID = UUID()
+    func createSticker(id stickerID: UUID, originalImage: UIImage, stickerImage: UIImage, for userID: String, isSpecial: Bool) async throws -> FoodItem {
         let creationDate = Date()
         
-        // Determine if this item will be special based on the configured probability.
-        let isSpecial = Double.random(in: 0...1) < specialItemProbability
+        print("[FirestoreService] New sticker being created. Is special: \(isSpecial)")
         
         // Prepare image data for sticker and thumbnail.
         guard let stickerImageData = stickerImage.pngData() else {

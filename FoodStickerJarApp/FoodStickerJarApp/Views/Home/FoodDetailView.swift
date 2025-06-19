@@ -78,19 +78,20 @@ struct FoodDetailView: View {
                                     .resizable()
                                     .placeholder {
                                         // Show a placeholder while the image is loading
-                                        Image(systemName: "photo")
-                                            .resizable()
-                                            .foregroundColor(.gray)
-                                            .aspectRatio(contentMode: .fit)
+                                        Text("(っ˘ω˘ς) loading...")
+                                            .font(.headline)
+                                            .fontWeight(.light)
+                                            .foregroundColor(.secondary)
                                     }
                                     .if(namespace != nil) { view in
                                         view.matchedGeometryEffect(id: "sticker", in: namespace!)
                                     }
                             } else {
                                 // Show a placeholder if the image data is invalid
-                                Image(systemName: "photo")
-                                    .resizable()
-                                    .foregroundColor(.gray)
+                                Text("(っ˘ω˘ς) loading...")
+                                    .font(.headline)
+                                    .fontWeight(.light)
+                                    .foregroundColor(.secondary)
                             }
                         }
                         .aspectRatio(contentMode: .fit)
@@ -195,30 +196,40 @@ private struct SpecialContentView: View {
     let content: String?
     
     var body: some View {
-        VStack(alignment: .leading, spacing: 16) {
-            HStack {
-                Image(systemName: "sparkles")
-                    .foregroundColor(.orange)
-                Text("A Rare Sticker!")
-                    .font(.headline)
-                    .foregroundColor(.secondary)
-            }
+        HStack(spacing: 12) {
+            // The vertical line on the left of the quote block
+            Rectangle()
+                .fill(Color.orange.opacity(0.6))
+                .frame(width: 3)
             
-            if let content = content {
-                // If we have the content, display it.
-                Text(content)
-                    .font(.custom("Georgia", size: 17))
-            } else {
-                // If content is nil, it's still loading.
-                HStack(spacing: 10) {
-                    ProgressView()
-                    Text("Unraveling its story...")
-                        .font(.custom("Georgia-Italic", size: 16))
+            VStack(alignment: .leading, spacing: 8) { // Reduced spacing for a tighter block
+                HStack {
+                    Image(systemName: "sparkles")
+                        .foregroundColor(.orange)
+                    Text("A Rare Sticker!")
+                        .font(.headline)
                         .foregroundColor(.secondary)
+                }
+                
+                if let content = content {
+                    // If we have the content, display it.
+                    Text(content)
+                        .font(.custom("Georgia", size: 17))
+                } else {
+                    // If content is nil, it's still loading.
+                    HStack(spacing: 10) {
+                        ProgressView()
+                        Text("Unraveling its story...")
+                            .font(.custom("Georgia-Italic", size: 16))
+                            .foregroundColor(.secondary)
+                    }
                 }
             }
         }
-        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(.vertical, 12)
+        .padding(.horizontal, 10)
+        .background(Color.black.opacity(0.04))
+        .cornerRadius(8)
     }
 }
 

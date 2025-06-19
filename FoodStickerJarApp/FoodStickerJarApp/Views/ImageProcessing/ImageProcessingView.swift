@@ -36,15 +36,21 @@ struct ImageProcessingView: View {
             
         case .cropping(let image):
             // This view contains the VisionKit subject lifting logic.
-            SubjectLiftContainerView(image: image, onComplete: { finalSticker in
-                // --- FIX: Start backend processing as soon as the sticker is ready ---
-                // This ensures the detail view will have data when it appears.
-                Task {
-                    await viewModel.processNewSticker(originalImage: image, stickerImage: finalSticker)
-                }
+            SubjectLiftContainerView(image: image, onComplete: { finalSticker, isSpecial in
                 
-                // Now, move to the animation state.
+                // Immediately prepare the UI for the animation by creating a
+                // temporary local FoodItem.
+                let stickerID = viewModel.prepareForAnimation(isSpecial: isSpecial)
+                
+                // Immediately transition to the animation state so the user
+                // sees the effect without waiting for the network.
                 currentState = .animating(original: image, sticker: finalSticker)
+                
+                // Launch a detached background task to handle the slow work
+                // of saving the images and data to the network.
+                Task {
+                    await viewModel.processNewSticker(id: stickerID, originalImage: image, stickerImage: finalSticker)
+                }
             })
             .ignoresSafeArea()
             
@@ -70,7 +76,7 @@ struct ImageProcessingView: View {
 /// A helper view that wraps the VisionKit subject lifting UI.
 private struct SubjectLiftContainerView: View {
     let image: UIImage
-    let onComplete: (UIImage) -> Void
+    let onComplete: (UIImage, Bool) -> Void
     
     // The VisionKit interaction object.
     @State private var interaction = ImageAnalysisInteraction()
@@ -172,12 +178,17 @@ private struct SubjectLiftContainerView: View {
                     let subjectImage = try await interaction.image(for: [mainSubject])
                     print("[SubjectLift] Subject image extracted. Applying sticker effect...")
                     
-                    if let stickerWithOutline = subjectImage.addingStickerOutline(width: 20, color: .white) {
-                        let finalSticker = stickerWithOutline.resized(toMaxSize: 250)
+                    // Determine if the sticker is special right here, before creating the image.
+                    let isSpecial = Double.random(in: 0...1) < AppConfig.specialItemProbability
+                    print("[SubjectLift] Sticker is special: \(isSpecial)")
+                    
+                    // Generate the sticker with the correct effect (white outline or rainbow glow).
+                    if let stickerWithEffect = subjectImage.addingStickerEffect(width: 20, isSpecial: isSpecial) {
+                        let finalSticker = stickerWithEffect.resized(toMaxSize: 250)
                         print("[SubjectLift] Sticker created successfully. Calling onComplete.")
-                        onComplete(finalSticker)
+                        onComplete(finalSticker, isSpecial)
                     } else {
-                        print("[SubjectLift] Error: Failed to apply sticker outline.")
+                        print("[SubjectLift] Error: Failed to apply sticker effect.")
                         self.analysisState = .noSubjectsFound
                     }
                 } catch {

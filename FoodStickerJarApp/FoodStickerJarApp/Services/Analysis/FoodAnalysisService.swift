@@ -1,6 +1,7 @@
 import SwiftUI
 
 // A struct to decode the JSON response from the special content function.
+/* This is no longer needed as the main analysis function handles both cases.
 private struct SpecialContentResponse: Codable {
     let specialContent: String
     
@@ -8,6 +9,7 @@ private struct SpecialContentResponse: Codable {
         case specialContent = "special_content"
     }
 }
+*/
 
 /// A service to communicate with the backend Cloud Function for food analysis.
 class FoodAnalysisService {
@@ -15,8 +17,8 @@ class FoodAnalysisService {
     // --- CONFIGURATION ---
     // IMPORTANT: Replace this with the trigger URL for your DEPLOYED `analyze_food` Cloud Function.
     private let analysisFunctionURLString = "https://us-central1-foodjar-462805.cloudfunctions.net/analyze_food"
-    // IMPORTANT: Replace this with the trigger URL for your DEPLOYED `generate_special_content` Cloud Function.
-    private let specialContentFunctionURLString = "https://us-central1-foodjar-462805.cloudfunctions.net/generate_special_content" // <-- REPLACE
+    // The special content function is now deprecated.
+    // private let specialContentFunctionURLString = "https://us-central1-foodjar-462805.cloudfunctions.net/generate_special_content"
     
     // Custom error type for more specific error handling.
     enum AnalysisError: Error {
@@ -27,6 +29,8 @@ class FoodAnalysisService {
         case noData
     }
     
+    // This function is now deprecated in favor of the unified analysis call.
+    /*
     /// Fetches a whimsical story for a special food item from the backend.
     /// - Parameter foodName: The name of the food to get a story for.
     /// - Returns: A `Result` containing either the story `String` or an `AnalysisError`.
@@ -64,13 +68,15 @@ class FoodAnalysisService {
             }
         }
     }
+    */
     
     /// Sends an image to the Cloud Function for analysis using modern async/await.
     /// - Parameter image: The `UIImage` of the sticker to analyze.
+    /// - Parameter isSpecial: A flag indicating if a creative prompt should be used.
     /// - Returns: A `Result` containing either the decoded `FoodInfo` or an `AnalysisError`.
-    func analyzeFoodImage(_ image: UIImage) async -> Result<FoodInfo, AnalysisError> {
+    func analyzeFoodImage(_ image: UIImage, isSpecial: Bool) async -> Result<FoodInfo, AnalysisError> {
         await withCheckedContinuation { continuation in
-            analyzeFoodImage(image) { result in
+            analyzeFoodImage(image, isSpecial: isSpecial) { result in
                 continuation.resume(returning: result)
             }
         }
@@ -79,8 +85,9 @@ class FoodAnalysisService {
     /// Sends an image to the Cloud Function for analysis.
     /// - Parameters:
     ///   - image: The `UIImage` of the sticker to analyze.
+    ///   - isSpecial: A flag indicating if a creative prompt should be used.
     ///   - completion: A closure that returns a `Result` containing either the decoded `FoodInfo` or an `AnalysisError`.
-    func analyzeFoodImage(_ image: UIImage, completion: @escaping (Result<FoodInfo, AnalysisError>) -> Void) {
+    func analyzeFoodImage(_ image: UIImage, isSpecial: Bool, completion: @escaping (Result<FoodInfo, AnalysisError>) -> Void) {
         guard let url = URL(string: analysisFunctionURLString) else {
             completion(.failure(.invalidURL))
             return
@@ -92,8 +99,11 @@ class FoodAnalysisService {
             return
         }
         
-        // Prepare the JSON payload.
-        let payload = ["image_data": imageData]
+        // Prepare the JSON payload, now including the 'is_special' flag.
+        let payload: [String: Any] = [
+            "image_data": imageData,
+            "is_special": isSpecial
+        ]
         guard let httpBody = try? JSONSerialization.data(withJSONObject: payload) else {
             completion(.failure(.decodingError(NSError(domain: "JSONEncoding", code: 0, userInfo: [NSLocalizedDescriptionKey: "Failed to create JSON body"]))))
             return

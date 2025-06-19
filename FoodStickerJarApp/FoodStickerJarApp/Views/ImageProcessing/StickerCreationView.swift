@@ -15,10 +15,16 @@ struct StickerCreationView: View {
     // State to control the animation flow.
     private enum AnimationState {
         case preparing
+        case holographic
         case animating
         case detailView
     }
     @State private var animationState: AnimationState = .preparing
+    
+    // Controls the sticker's fade-in animation.
+    @State private var stickerOpacity: Double = 0.0
+    // Controls the blooming holographic background effect.
+    @State private var showHolographicEffect = false
     
     // The generated background image for the sparkle effect.
     @State private var backgroundImage: UIImage?
@@ -44,6 +50,33 @@ struct StickerCreationView: View {
 
             if animationState == .detailView {
                 FoodDetailView(foodItem: $viewModel.newSticker, stickerImage: stickerImage, namespace: namespace)
+                
+            } else if animationState == .holographic {
+                // For special items, show the sticker fading in over a
+                // background with the holographic shine effect.
+                ZStack {
+                    // The background that receives the holographic effect.
+                    // By applying the effect to a clear Rectangle that ignores
+                    // the safe area, we ensure it covers the entire screen.
+                    Rectangle()
+                        .fill(Color.clear)
+                        .holographic(isActive: $showHolographicEffect, duration: 4.0)
+                        .ignoresSafeArea()
+
+                    // The sticker itself, which fades in.
+                    Image(uiImage: stickerImage)
+                        .resizable()
+                        .aspectRatio(contentMode: .fit)
+                        .matchedGeometryEffect(id: "sticker", in: namespace, isSource: true)
+                        .frame(maxHeight: 350)
+                        .opacity(stickerOpacity)
+                }
+                .onAppear {
+                    // Trigger the fade-in animation.
+                    withAnimation(.easeIn(duration: 0.8)) {
+                        stickerOpacity = 1.0
+                    }
+                }
                 
             } else if animationState == .animating, let scene = sparkleScene, let bg = backgroundImage {
                 // The sparkle animation is in progress.
@@ -90,13 +123,9 @@ struct StickerCreationView: View {
         if let bg = backgroundImage {
             // Check if the new sticker is special. Default to 'false' if it's somehow nil.
             let isSpecial = viewModel.newSticker?.isSpecial ?? false
+            print("[StickerCreationView] Preparing animation. Sticker is special: \(isSpecial)")
             
-            // If it's a special item, play the celebratory haptic.
-            if isSpecial {
-                hapticManager?.playSpecialReveal()
-            }
-            
-            // Create the scene once.
+            // Create the scene that will be used for the sparkle animation.
             self.sparkleScene = SparkleScene(size: size, background: bg, isSpecial: isSpecial) {
                 // This completion is called when the sparkle animation ends.
                 withAnimation(.spring(response: 0.6, dampingFraction: 0.8)) {
@@ -104,11 +133,49 @@ struct StickerCreationView: View {
                     self.animationState = .detailView
                 }
             }
-            // Move to the animating state AFTER the scene is created.
-            DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
-                withAnimation(.easeInOut(duration: 1.0)) {
-                    print("[StickerCreationView] Switching to .animating state.")
-                    self.animationState = .animating
+
+            // --- Animation Flow Control ---
+            if isSpecial {
+                // For special items, start with the holographic effect.
+                print("[StickerCreationView] Taking SPECIAL animation path.")
+                self.animationState = .holographic
+                
+                // After a brief moment, trigger the bloom-in animations.
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+                    hapticManager?.playSpecialReveal()
+                    
+                    // The sticker's fade-in is delayed slightly to let the
+                    // bloom effect start first, creating a "reveal" effect.
+                    withAnimation(.easeIn(duration: 0.8).delay(0.3)) {
+                        self.stickerOpacity = 1.0
+                    }
+                    
+                    withAnimation(.spring(response: 0.6, dampingFraction: 0.8)) {
+                        self.showHolographicEffect = true
+                    }
+                }
+                
+                // After the effect plays, trigger the bloom-out and transition.
+                DispatchQueue.main.asyncAfter(deadline: .now() + 4.0) { // Total duration
+                    // First, bloom out the background effect.
+                    withAnimation(.easeOut(duration: 0.5)) {
+                        self.showHolographicEffect = false
+                    }
+                    
+                    // Then, after the bloom-out starts, transition to the detail view.
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) {
+                        withAnimation(.spring(response: 0.6, dampingFraction: 0.8)) {
+                            self.animationState = .detailView
+                        }
+                    }
+                }
+            } else {
+                // For normal items, go directly to the sparkle animation.
+                print("[StickerCreationView] Taking NORMAL animation path.")
+                DispatchQueue.main.async {
+                    withAnimation(.easeInOut(duration: 1.0)) {
+                        self.animationState = .animating
+                    }
                 }
             }
         } else {
