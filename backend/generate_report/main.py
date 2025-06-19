@@ -64,7 +64,7 @@ def generate_report(req: https_fn.Request) -> https_fn.Response:
         report_text = response.text
 
         # 6. Return the generated report
-        return https_fn.Response(report_text)
+        return report_text
 
     except Exception as e:
         print(f"An error occurred: {e}")
