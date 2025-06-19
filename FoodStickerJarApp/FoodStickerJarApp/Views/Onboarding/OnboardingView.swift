@@ -36,16 +36,23 @@ struct OnboardingView: View {
                         currentStep = .intro
                     }
                 }
+                .transition(.asymmetric(insertion: .move(edge: .trailing), removal: .move(edge: .leading)))
             case .intro:
-                // Placeholder for the next set of screens
+                IntroCarouselView {
+                    // When the carousel is finished, advance to the next step.
+                    withAnimation {
+                        currentStep = .name
+                    }
+                }
+                .transition(.asymmetric(insertion: .move(edge: .trailing), removal: .move(edge: .leading)))
+            default:
+                // A single placeholder for all subsequent steps.
                 VStack {
-                    Text("Intro Placeholder")
+                    Text("Placeholder for: \(String(describing: currentStep))")
                     Button("Finish Onboarding (Temporary)") {
                         onComplete()
                     }
                 }
-            default:
-                Text("Placeholder for other steps")
             }
         }
     }
