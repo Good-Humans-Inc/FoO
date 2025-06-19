@@ -14,3 +14,4 @@ Pods/
 GoogleService-Info.plist 
 .env
 .build/.build/
+.build/
