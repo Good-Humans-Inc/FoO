@@ -58,13 +58,14 @@ You are a food expert. Analyze the object in this image. If it is a food item, i
 
 Your response must be a single, valid JSON object and nothing else. Do not include ```json or any other markdown formatting.
 
-The JSON object must have three keys: "name" (string), "fun_fact" (string), and "nutrition" (string).
+The JSON object must have four keys: "is_food" (boolean), "name" (string), "fun_fact" (string), and "nutrition" (string).
 
-- The 'name' should be the common name of the food (e.g., "Avocado", "Pepperoni Pizza").
-- The 'fun_fact' should be a single, interesting sentence about the food's history, origin, or a surprising fact.
-- The 'nutrition' should be a concise summary of key nutritional values (e.g., "Rich in Vitamin C and fiber. A good source of potassium.").
+- The 'is_food' should be a boolean value indicating whether the object is a food item.
+- The 'name' should be the common name of the food or object (e.g., "Avocado", "Pepperoni Pizza", "Headphones).
+- The 'fun_fact' should be a single, interesting sentence about the food's or object's history, origin, or a surprising fact.
+- The 'nutrition' should be a concise summary of key nutritional values (e.g., "Rich in Vitamin C and fiber. A good source of potassium."). If the object is not food, or you cannot identify it, say "N/A" 
 
-If the object is not a food item or you cannot identify it, the value for all three keys must be the string "N/A".
+If you don't know the answer for a particular key or you cannot identify the object, the value must be the string "N/A".
 """
 
     try:
@@ -86,8 +87,9 @@ If the object is not a food item or you cannot identify it, the value for all th
     except Exception as e:
         # If anything goes wrong, return a structured error.
         error_payload = {
-            "name": "Analysis Failed",
-            "fun_fact": f"An error occurred during analysis: {e}",
-            "nutrition": "Please try again later."
+            "is_food": False,
+            "name": "???",
+            "fun_fact": f"(×_×;) An error occurred during analysis: {e}",
+            "nutrition": "Please try again."
         }
         return (json.dumps(error_payload), 500, headers) 

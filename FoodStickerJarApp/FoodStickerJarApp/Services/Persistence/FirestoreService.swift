@@ -79,6 +79,7 @@ class FirestoreService {
         // This will merge the new data with the existing document,
         // or create it if it doesn't exist (which shouldn't happen in this flow).
         try await stickerDocument.setData([
+            "isFood": sticker.isFood as Any,
             "name": sticker.name as Any,
             "funFact": sticker.funFact as Any,
             "nutrition": sticker.nutrition as Any

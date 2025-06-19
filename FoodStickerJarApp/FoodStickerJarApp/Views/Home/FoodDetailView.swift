@@ -9,6 +9,32 @@ struct FoodDetailView: View {
     
     @Environment(\.dismiss) var dismiss
     
+    // A static, efficient array of messages for unidentifiable items.
+    private static let unidentifiableMessages = [
+        "You better not eat that.",
+        "Let's not feed this to anyone.",
+        "Might be food. Might be art.",
+        "It's a mystery.",
+        "Calories: undefined. Courage: required.",
+        "Chef, we have a situation.",
+        "My algorithm is confused. And a little scared.",
+        "On a scale of 1 to food, this is a 0.",
+        "Could be delicious...if you're an alien.",
+        "Hopefully you have not ingested this.",
+        "Just to remind you this is your food jar, not your poison control center.",
+        "Blink twice if you need help.",
+        "For your safety, and mine, let's not.",
+        "Debatable.",
+        "Let's call this one \"Abstract Cuisine\".",
+        "Is it cake?",
+        "The plot thickens...",
+        "This looks like it has a backstory.",
+        "Best served... on a shelf.",
+    ]
+    
+    // Use @State to select a random message once and keep it stable.
+    @State private var randomNotFoodMessage: String = unidentifiableMessages.randomElement() ?? "You better not eat that."
+    
     var body: some View {
         // This guard makes the view crash-proof. If the binding becomes nil
         // during a dismiss animation, it shows an empty view instead of crashing.
@@ -16,7 +42,7 @@ struct FoodDetailView: View {
             VStack(spacing: 0) {
                 // Header with a close button on the right
                 HStack {
-                    Text(foodItem.creationDate, format: .dateTime.month(.abbreviated).day().hour().minute().second())
+                    Text(foodItem.creationDate, format: .dateTime.month(.abbreviated).day().hour().minute())
                         .font(.system(size: 16, weight: .bold, design: .rounded))
                         .foregroundColor(.secondary)
 
@@ -65,7 +91,7 @@ struct FoodDetailView: View {
                                         .font(.system(size: 32, weight: .bold, design: .serif))
                                 } else {
                                     // Show a loading/analyzing state
-                                    Text("Analyzing...")
+                                    Text("Thinking...")
                                         .font(.system(size: 24, weight: .semibold, design: .serif))
                                 }
                             }
@@ -75,29 +101,29 @@ struct FoodDetailView: View {
                             Divider()
                             
                             // Details
-                            if foodItem.funFact == "NOT_FOOD" {
-                                // Case: Not a food item. Display the funny line from the backend.
-                                Text(foodItem.nutrition ?? "Oh, you eat that? Come on.")
-                                    .font(.body)
-                                    .foregroundColor(.secondary)
-                                    .multilineTextAlignment(.center)
-                                    .padding(.top)
-                            } else if let funFact = foodItem.funFact, let nutrition = foodItem.nutrition, foodItem.name != "N/A" {
+                            if foodItem.isFood == true {
                                 // Case: It's a food item with full details.
-                                VStack(alignment: .leading, spacing: 16) {
-                                    InfoRow(title: "Do you know?", content: funFact)
-                                    InfoRow(title: "Nutrition", content: nutrition)
+                                if let funFact = foodItem.funFact, let nutrition = foodItem.nutrition,
+                                   funFact != "N/A", nutrition != "N/A" {
+                                    VStack(alignment: .leading, spacing: 16) {
+                                        InfoRow(title: "Do you know?", content: funFact)
+                                        InfoRow(title: "Nutrition", content: nutrition)
+                                    }
+                                    .frame(maxWidth: .infinity, alignment: .leading)
+                                } else {
+                                    // This can happen if analysis is still processing for a food item.
+                                    ProgressView()
+                                        .padding(.top)
                                 }
-                                .frame(maxWidth: .infinity, alignment: .leading)
-                            } else if foodItem.name == "N/A" {
-                                // Case: Unidentifiable.
-                                Text("You better not eat that")
+                            } else if foodItem.isFood == false {
+                                // Case: Not a food item (or unidentifiable).
+                                Text(randomNotFoodMessage)
                                     .font(.body)
                                     .foregroundColor(.secondary)
                                     .multilineTextAlignment(.center)
                                     .padding(.top)
                             } else {
-                                // Case: Still loading.
+                                // Case: Still loading (isFood is nil).
                                 ProgressView()
                                     .padding(.top)
                             }

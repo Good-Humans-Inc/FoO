@@ -86,19 +86,19 @@ private struct SubjectLiftContainerView: View {
                 // Instruction text based on the analysis state.
                 switch analysisState {
                 case .analyzing:
-                    Text("Analyzing for food...")
+                    Text("Taking a look ( •̀_•́)ノ")
                         .padding()
                         .background(.black.opacity(0.7))
                         .foregroundColor(.white)
                         .cornerRadius(10)
                 case .subjectsFound:
-                    Text("Subject found! Creating your sticker...")
+                    Text("Found it! (≧◡≦)♡")
                         .padding()
                         .background(.black.opacity(0.7))
                         .foregroundColor(.white)
                         .cornerRadius(10)
                 case .noSubjectsFound:
-                    Text("Couldn't find a subject. Please try another photo.")
+                    Text("Hmm... I'm lost ( •́‸•̀) Can you center the food and get a clear, close shot?")
                         .padding()
                         .multilineTextAlignment(.center)
                         .background(Color.red.opacity(0.8))
@@ -110,7 +110,7 @@ private struct SubjectLiftContainerView: View {
                 
                 // Only show a button if the process fails. Otherwise, it's automatic.
                 if analysisState == .noSubjectsFound {
-                    Button("Try Again") { dismiss() }
+                    Button("Try again!") { dismiss() }
                         .padding()
                         .background(.thinMaterial)
                         .cornerRadius(10)
