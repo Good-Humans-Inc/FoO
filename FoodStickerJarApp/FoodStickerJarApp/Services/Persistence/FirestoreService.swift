@@ -94,6 +94,8 @@ class FirestoreService {
     func loadStickers(for userID: String) async throws -> [FoodItem] {
         print("FirestoreService: Preparing to load stickers for user ID: \(userID)")
         
+        // With the new architecture, we no longer need to filter.
+        // This collection will only contain active stickers.
         let stickerCollection = db.collection("users").document(userID).collection("stickers")
         
         do {
@@ -118,6 +120,147 @@ class FirestoreService {
             print("   - Error Details: \(error.localizedDescription)")
             // Re-throw the error so the caller (HomeViewModel) can handle it.
             throw error
+        }
+    }
+    
+    /// Checks if a user document exists in Firestore for the given userID, and creates one if it doesn't.
+    /// This ensures that every user has a corresponding document in the `users` collection.
+    /// This function uses a transaction to prevent race conditions.
+    /// - Parameter userID: The ID of the user to check and potentially create.
+    func checkAndCreateUserDocument(for userID: String) async {
+        let userDocumentRef = db.collection("users").document(userID)
+        
+        do {
+            // 1. Attempt to get the document.
+            let document = try await userDocumentRef.getDocument()
+            
+            // 2. Check if it exists and if the jarIDs field is missing.
+            if document.exists {
+                if document.data()?["jarIDs"] == nil {
+                    // If the field is missing, update the document.
+                    try await userDocumentRef.updateData(["jarIDs": []])
+                    print("✅ FirestoreService: Repaired existing user document for \(userID) by adding missing jarIDs field.")
+                }
+                // If document exists and has the field, we're done.
+            } else {
+                // 3. If the document does not exist, create it.
+                let newUser = User(id: userID, jarIDs: [])
+                try userDocumentRef.setData(from: newUser)
+                print("✅ FirestoreService: Created new user document for \(userID).")
+            }
+        } catch {
+            print("❌ FirestoreService: Failed to check or create user document for \(userID): \(error)")
+        }
+    }
+    
+    /// Archives a collection of stickers as a new jar in Firestore.
+    /// This function uses a batched write to ensure atomicity.
+    /// It creates the new jar with embedded sticker data, deletes the original stickers,
+    /// and updates the user's list of jar IDs all at once.
+    /// - Parameters:
+    ///   - stickers: An array of `FoodItem` objects to be archived.
+    ///   - screenshotURL: The URL of the jar's screenshot thumbnail.
+    ///   - userID: The ID of the user archiving the jar.
+    ///   - report: An optional string containing the weekly report.
+    /// - Returns: The newly created `JarItem`.
+    func archiveJar(stickers: [FoodItem], screenshotURL: String, for userID: String, report: String?) async throws -> JarItem {
+        let newJarRef = db.collection("jars").document()
+        let userRef = db.collection("users").document(userID)
+        
+        let newJarItem = JarItem(
+            id: newJarRef.documentID,
+            userID: userID,
+            timestamp: Timestamp(date: Date()),
+            screenshotThumbnailURL: screenshotURL,
+            stickers: stickers,
+            report: report
+        )
+        
+        let batch = db.batch()
+        
+        // 1. Create the new jar document with all sticker data embedded.
+        try batch.setData(from: newJarItem, forDocument: newJarRef)
+        
+        // 2. Delete each of the original stickers from the user's sticker collection.
+        for sticker in stickers {
+            let stickerRef = db.collection("users").document(userID).collection("stickers").document(sticker.id.uuidString)
+            batch.deleteDocument(stickerRef)
+        }
+        
+        // 3. Atomically add the new jar's ID to the user's list of jarIDs.
+        batch.setData([
+            "jarIDs": FieldValue.arrayUnion([newJarRef.documentID])
+        ], forDocument: userRef, merge: true)
+        
+        // Commit the batch
+        try await batch.commit()
+        
+        print("✅ FirestoreService: Successfully archived jar \(newJarRef.documentID) for user \(userID).")
+        
+        return newJarItem
+    }
+    
+    /// Fetches all jars belonging to a specific user.
+    /// - Parameter userID: The ID of the user whose jars to fetch.
+    /// - Returns: An array of `JarItem` objects.
+    func fetchJars(for userID: String) async throws -> [JarItem] {
+        let querySnapshot = try await db.collection("jars")
+                                      .whereField("userID", isEqualTo: userID)
+                                      .getDocuments()
+        
+        let jars = try querySnapshot.documents.compactMap { document in
+            try document.data(as: JarItem.self)
+        }
+        
+        return jars
+    }
+    
+    /// Fetches a single jar from Firestore by its ID.
+    /// - Parameter jarID: The ID of the jar to fetch.
+    /// - Returns: A `JarItem` object.
+    func fetchJar(with jarID: String) async throws -> JarItem {
+        let jar = try await db.collection("jars").document(jarID).getDocument(as: JarItem.self)
+        return jar
+    }
+
+    /// Fetches a user document from Firestore by its ID.
+    /// - Parameter userID: The ID of the user to fetch.
+    /// - Returns: A `User` object.
+    func fetchUser(with userID: String) async throws -> User {
+        let user = try await db.collection("users").document(userID).getDocument(as: User.self)
+        return user
+    }
+    
+    /// Fetches a collection of stickers for a given user from Firestore based on their IDs.
+    /// - Parameters:
+    ///   - ids: An array of sticker document IDs to fetch.
+    ///   - userID: The ID of the user who owns the stickers.
+    /// - Returns: An array of `FoodItem` objects.
+    func fetchStickers(by ids: [String], for userID: String) async throws -> [FoodItem] {
+        guard !ids.isEmpty else { return [] }
+        
+        // Firestore's `in` query is limited to 30 elements.
+        // If we expect more, we need to chunk the requests.
+        let chunks = ids.chunked(into: 30)
+        var foodItems: [FoodItem] = []
+        
+        for chunk in chunks {
+            let querySnapshot = try await db.collection("users").document(userID).collection("stickers").whereField(FieldPath.documentID(), in: chunk).getDocuments()
+            
+            let items = try querySnapshot.documents.compactMap { document in
+                try document.data(as: FoodItem.self)
+            }
+            foodItems.append(contentsOf: items)
+        }
+        
+        return foodItems
+    }
+}
+
+extension Array {
+    func chunked(into size: Int) -> [[Element]] {
+        return stride(from: 0, to: count, by: size).map {
+            Array(self[$0 ..< Swift.min($0 + size, count)])
         }
     }
 } 

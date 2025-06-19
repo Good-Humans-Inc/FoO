@@ -2,16 +2,19 @@ import Foundation
 import FirebaseAuth
 import Combine
 
+typealias FirebaseUser = FirebaseAuth.User
+
 /// A service to manage the user's authentication state with Firebase.
 /// This class listens for changes to the authentication state and provides the current user's info.
 class AuthenticationService: ObservableObject {
     
     // A published property that holds the current Firebase User.
     // Your views can observe this to see if a user is signed in.
-    @Published var user: User?
+    @Published var user: FirebaseUser?
     
     // A handle for the authentication state listener, so we can detach it when the service is deallocated.
     private var authStateHandle: AuthStateDidChangeListenerHandle?
+    private let firestoreService = FirestoreService()
     
     init() {
         // When the service is created, start listening for authentication changes.
@@ -45,6 +48,10 @@ class AuthenticationService: ObservableObject {
             
             if let user = authResult?.user {
                 print("Signed in anonymously with UID: \(user.uid)")
+                // Ensure a user document exists in Firestore.
+                Task {
+                    await self.firestoreService.checkAndCreateUserDocument(for: user.uid)
+                }
             }
         }
     }

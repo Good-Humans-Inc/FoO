@@ -1,0 +1,17 @@
+# Xcode
+.DS_Store
+*.xcodeproj/project.xcworkspace/*
+!*.xcodeproj/project.xcworkspace/contents.xcworkspacedata
+*.xcodeproj/xcuserdata/
+*.xcscmblueprint
+*.xcscheme
+*.moved-aside
+
+# Cocoapods
+Pods/
+
+# Firebase
+GoogleService-Info.plist 
+.env
+.build/.build/
+.build/

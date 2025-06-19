@@ -1,17 +1,17 @@
 {
   "images" : [
     {
-      "filename" : "Jar6.png",
+      "filename" : "jar_shelf.png",
       "idiom" : "universal",
       "scale" : "1x"
     },
     {
-      "filename" : "Jar6 1.png",
+      "filename" : "jar_shelf 1.png",
       "idiom" : "universal",
       "scale" : "2x"
     },
     {
-      "filename" : "Jar6 2.png",
+      "filename" : "jar_shelf 2.png",
       "idiom" : "universal",
       "scale" : "3x"
     }

@@ -1,0 +1,10 @@
+# Used by Google Cloud Functions
+functions-framework==3.*
+google-cloud-aiplatform>=1.38
+
+# Firebase
+firebase-functions
+firebase-admin
+
+# Google Cloud AI for Gemini
+google-cloud-aiplatform 
