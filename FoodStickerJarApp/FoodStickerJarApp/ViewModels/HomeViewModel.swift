@@ -161,6 +161,14 @@ class HomeViewModel: ObservableObject {
         // 1. Set state to show a loading UI.
         print("[HomeViewModel] Starting processNewSticker in the background.")
         
+        // Determine if the sticker is special to play the correct sound.
+        let isSpecial = newSticker?.isSpecial ?? false
+        if isSpecial {
+            SoundManager.shared.playSound(named: "specialGen")
+        } else {
+            SoundManager.shared.playSound(named: "stickerGen")
+        }
+        
         guard let userId = self.userId else {
             // Since this runs in the background, we can't show a normal error.
             // In a real app, you might log this to a service like Crashlytics.
@@ -169,8 +177,6 @@ class HomeViewModel: ObservableObject {
         }
         
         // 2. Launch saving and analysis tasks in parallel.
-        // We use the 'isSpecial' flag from the temporary item created for the UI.
-        let isSpecial = newSticker?.isSpecial ?? false
         async let savingTask: FoodItem = firestoreService.createSticker(id: id, originalImage: originalImage, stickerImage: stickerImage, for: userId, isSpecial: isSpecial)
         async let analysisTask = analysisService.analyzeFoodImage(stickerImage, isSpecial: isSpecial)
 
@@ -387,7 +393,7 @@ class HomeViewModel: ObservableObject {
             self.animateAndClearJar()
         }
     }
-    
+
     private func animateAndClearJar() {
         jarScene.animateStickersVanishing {
             self.jarScene.clear()

@@ -172,6 +172,12 @@ class JarScene: SKScene, SKPhysicsContactDelegate {
     func addSticker(foodItem: FoodItem, image: UIImage? = nil, isNew: Bool = false) {
         foodItemsById[foodItem.id] = foodItem
         
+        if foodItem.isSpecial == true {
+            SoundManager.shared.playSound(named: "specialDrop")
+        } else {
+            SoundManager.shared.playSound(named: "normyDrop")
+        }
+        
         if let providedImage = image {
             // If an image is provided directly (e.g., for the report scroll), use it.
             let texture = SKTexture(image: providedImage)
