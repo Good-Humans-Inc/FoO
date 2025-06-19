@@ -183,7 +183,7 @@ private struct SubjectLiftContainerView: View {
                     print("[SubjectLift] Sticker is special: \(isSpecial)")
                     
                     // Use a wider border for special items to make them pop.
-                    let borderWidth = isSpecial ? 90.0 : 60.0
+                    let borderWidth = isSpecial ? 90.0 : 25.0
                     
                     // Generate the sticker with the correct effect (white outline or rainbow glow).
                     if let stickerWithEffect = subjectImage.addingStickerEffect(width: borderWidth, isSpecial: isSpecial) {

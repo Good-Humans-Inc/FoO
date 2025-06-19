@@ -78,7 +78,7 @@ extension UIImage {
 
             } else {
                 // For normal items, use the original solid white outline method.
-                let solidColor = CIImage(color: CIColor(color: .white))
+                let solidColor = CIImage(color: CIColor(color: UIColor(white: 0.95, alpha: 1.0)))
                 let stickerBaseCiImage = solidColor.applyingFilter("CIBlendWithMask", parameters: [
                     kCIInputMaskImageKey: stickerShape
                 ])

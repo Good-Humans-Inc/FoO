@@ -20,12 +20,8 @@ struct FoodItem: Identifiable, Codable, Equatable, Hashable {
     // They are optional because they will be populated asynchronously.
     var isFood: Bool?
     var name: String?
-    var funFact: String?
-    var nutrition: String?
+    var description: String?
     
     // A flag to determine if the item has special, rare content.
     var isSpecial: Bool?
-    
-    // A whimsical story or poem, only for special items.
-    var specialContent: String?
 }

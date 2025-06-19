@@ -44,6 +44,9 @@ def analyze_food(request):
     if not request_json or 'image_data' not in request_json:
         return (json.dumps({"error": "Invalid request. Missing 'image_data' key."}), 400, headers)
 
+    # Also get the 'is_special' flag from the request. Default to False if not provided.
+    is_special = request_json.get('is_special', False)
+
     try:
         image_content = base64.b64decode(request_json['image_data'])
     except (TypeError, ValueError) as e:
@@ -53,19 +56,34 @@ def analyze_food(request):
     model = GenerativeModel("gemini-2.0-flash")
     image_part = Part.from_data(data=image_content, mime_type="image/png")
     
-    prompt = """
-You are a food expert. Analyze the object in this image. If it is a food item, identify it and provide a fun fact and nutritional information.
+    if is_special:
+        prompt = """
+You are a whimsical food muse for a children's game. A child has just discovered a rare, magical version of the food in this image.
 
 Your response must be a single, valid JSON object and nothing else. Do not include ```json or any other markdown formatting.
 
-The JSON object must have four keys: "is_food" (boolean), "name" (string), "fun_fact" (string), and "nutrition" (string).
+The JSON object must have three keys: "is_food" (boolean), "name" (string), and "description" (string).
 
-- The 'is_food' should be a boolean value indicating whether the object is a food item.
-- The 'name' should be the common name of the food or object (e.g., "Avocado", "Pepperoni Pizza", "Headphones).
-- The 'fun_fact' should be a single, interesting sentence about the food's or object's history, origin, or a surprising fact.
-- The 'nutrition' should be a concise summary of key nutritional values (e.g., "Rich in Vitamin C and fiber. A good source of potassium."). If the object is not food, or you cannot identify it, say "N/A" 
+- 'is_food': A boolean indicating if the object is food.
+- 'name': The common name of the food (e.g., "Avocado", "Pepperoni Pizza"). If unknown, use "Enchanted Enigma".
+- 'description': A short, creative, and imaginative text about this specific food item. Pick one of the following creative angles:
+    - "Food's Playlist": A few types of music this food would listen to and why.
+    - "Food's Spirit Animal": A playful comparison of the food to an animal.
+    - "A Tiny Poem": A short, whimsical poem about the food.
+    - "Origin Story": A magical origin story.
+If it's not food, invent a fantastical purpose for the object. If unknown, write: "Woah! This one is shimmering with untold secrets. Its story is a puzzle, wrapped in an enigma, sprinkled with stardust."
+"""
+    else:
+        prompt = """
+You are a food expert. Analyze the object in this image.
 
-If you don't know the answer for a particular key or you cannot identify the object, the value must be the string "N/A".
+Your response must be a single, valid JSON object and nothing else. Do not include ```json or any other markdown formatting.
+
+The JSON object must have three keys: "is_food" (boolean), "name" (string), and "description" (string).
+
+- 'is_food': A boolean indicating if the object is food.
+- 'name': The common name of the food or object (e.g., "Avocado", "Headphones"). If unknown, use "Mystery Morsel".
+- 'description': A concise, friendly paragraph. Combine a fun fact, a brief nutritional highlight, and maybe a mindful eating tip. If it's not food, give a playful, safe-for-work roast of the object. If unknown, say "My circuits are buzzing with mystery! I'm not sure what this is, but it definitely looks interesting."
 """
 
     try:
@@ -81,6 +99,11 @@ If you don't know the answer for a particular key or you cannot identify the obj
             
         json_string = response_text[json_start:json_end]
         parsed_json = json.loads(json_string)
+
+        # Ensure the response has the required keys before adding a placeholder, to avoid overwriting.
+        if 'is_food' not in parsed_json: parsed_json['is_food'] = False
+        if 'name' not in parsed_json: parsed_json['name'] = "???"
+        if 'description' not in parsed_json: parsed_json['description'] = "(×_×;) Confused..."
         
         return (json.dumps(parsed_json), 200, headers)
 
@@ -89,71 +112,6 @@ If you don't know the answer for a particular key or you cannot identify the obj
         error_payload = {
             "is_food": False,
             "name": "???",
-            "fun_fact": f"(×_×;) An error occurred during analysis: {e}",
-            "nutrition": "Please try again."
-        }
-        return (json.dumps(error_payload), 500, headers) 
-
-@functions_framework.http
-def generate_special_content(request):
-    """
-    HTTP Cloud Function to generate a whimsical story for a given food name.
-    Expects a JSON payload with a "name" key.
-    """
-    # Initialize Vertex AI
-    try:
-        vertexai.init(project=PROJECT_ID, location=LOCATION)
-    except Exception as e:
-        return (json.dumps({"error": f"Vertex AI initialization failed: {e}"}), 500, {'Access-Control-Allow-Origin': '*'})
-
-    # Handle CORS preflight requests
-    if request.method == 'OPTIONS':
-        headers = {
-            'Access-Control-Allow-Origin': '*',
-            'Access-Control-Allow-Methods': 'POST',
-            'Access-Control-Allow-Headers': 'Content-Type',
-            'Access-Control-Max-Age': '3600'
-        }
-        return ('', 204, headers)
-
-    headers = { 'Access-Control-Allow-Origin': '*' }
-
-    # Parse and validate the request
-    request_json = request.get_json(silent=True)
-    if not request_json or 'name' not in request_json:
-        return (json.dumps({"error": "Invalid request. Missing 'name' key."}), 400, headers)
-
-    food_name = request_json['name']
-
-    # Prepare the prompt for Gemini
-    model = GenerativeModel("gemini-1.5-flash-001")
-    
-    prompt = f"""
-You are a master storyteller for a children's game.
-A child has just discovered a special, rare food item: a {food_name}.
-Write a very short, whimsical, and imaginative origin story for this specific {food_name}. (Max 2-3 sentences).
-Make it sound magical and unique. Do not use markdown or any special formatting. Just return the plain text of the story.
-
-Example for "Broccoli":
-"This isn't just any broccoli! It's a tiny tree from the Whispering Woods, where gnomes hang tiny lanterns from its branches."
-
-Example for "Cheese":
-"This piece of cheese was nibbled from a moon made of delicious dairy, delivered to Earth by a friendly cow-shaped spaceship."
-"""
-
-    try:
-        # Generate the content
-        response = model.generate_content(prompt)
-        
-        # Clean up the response text
-        story = response.text.strip().replace('"', '')
-        
-        # Return the story in a JSON object
-        return (json.dumps({"special_content": story}), 200, headers)
-
-    except Exception as e:
-        # Handle errors during generation
-        error_payload = {
-            "special_content": f"The story of this {food_name} is still being written... (Error: {e})"
+            "description": f"(×_×;) An error occurred during analysis: {e}"
         }
         return (json.dumps(error_payload), 500, headers) 

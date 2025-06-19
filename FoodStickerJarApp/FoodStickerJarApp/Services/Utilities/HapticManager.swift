@@ -43,8 +43,8 @@ class HapticManager {
         let duration: TimeInterval = 1.0 // Shortened for quicker feedback
         
         // A continuous event that lasts for the full duration
-        let intensity = CHHapticEventParameter(parameterID: .hapticIntensity, value: 0.6)
-        let sharpness = CHHapticEventParameter(parameterID: .hapticSharpness, value: 0.8)
+        let intensity = CHHapticEventParameter(parameterID: .hapticIntensity, value: 0.2)
+        let sharpness = CHHapticEventParameter(parameterID: .hapticSharpness, value: 0.2)
         let continuousEvent = CHHapticEvent(
             eventType: .hapticContinuous,
             parameters: [intensity, sharpness],
@@ -57,8 +57,8 @@ class HapticManager {
         let intensityCurve = CHHapticParameterCurve(
             parameterID: .hapticIntensityControl,
             controlPoints: [
-                .init(relativeTime: 0, value: 0.2),
-                .init(relativeTime: duration, value: 1.0)
+                .init(relativeTime: 0, value: 0.1),
+                .init(relativeTime: duration, value: 0.7)
             ],
             relativeTime: 0
         )
@@ -86,33 +86,38 @@ class HapticManager {
     func playSpecialReveal() {
         guard let engine = engine else { return }
 
+        // --- Create a more distinct "double-tap" effect ---
+
         // 1. A very sharp, intense tap.
         let intensity1 = CHHapticEventParameter(parameterID: .hapticIntensity, value: 1.0)
         let sharpness1 = CHHapticEventParameter(parameterID: .hapticSharpness, value: 1.0)
         let event1 = CHHapticEvent(eventType: .hapticTransient, parameters: [intensity1, sharpness1], relativeTime: 0)
 
-        // 2. A softer, fading rumble immediately after.
-        let intensity2 = CHHapticEventParameter(parameterID: .hapticIntensity, value: 0.6)
-        let sharpness2 = CHHapticEventParameter(parameterID: .hapticSharpness, value: 0.3)
-        let event2 = CHHapticEvent(
+        // 2. A second sharp tap a moment later for emphasis.
+        let event2 = CHHapticEvent(eventType: .hapticTransient, parameters: [intensity1, sharpness1], relativeTime: 0.08)
+
+        // 3. A slightly stronger, fading rumble immediately after the double-tap.
+        let intensity3 = CHHapticEventParameter(parameterID: .hapticIntensity, value: 0.7) // Increased from 0.6
+        let sharpness3 = CHHapticEventParameter(parameterID: .hapticSharpness, value: 0.4) // Increased from 0.3
+        let event3 = CHHapticEvent(
             eventType: .hapticContinuous,
-            parameters: [intensity2, sharpness2],
-            relativeTime: 0.05, // Starts just after the first tap
+            parameters: [intensity3, sharpness3],
+            relativeTime: 0.16, // Starts just after the second tap
             duration: 0.5
         )
         
-        // 3. A parameter curve to make the rumble fade out.
+        // 4. A parameter curve to make the rumble fade out.
         let intensityCurve = CHHapticParameterCurve(
             parameterID: .hapticIntensityControl,
             controlPoints: [
-                .init(relativeTime: 0, value: 0.6),
+                .init(relativeTime: 0, value: 0.7), // Matches new intensity
                 .init(relativeTime: 0.5, value: 0)
             ],
-            relativeTime: 0.05 // Apply this curve to the continuous event
+            relativeTime: 0.16 // Apply this curve to the continuous event
         )
         
         do {
-            let pattern = try CHHapticPattern(events: [event1, event2], parameterCurves: [intensityCurve])
+            let pattern = try CHHapticPattern(events: [event1, event2, event3], parameterCurves: [intensityCurve])
             let player = try engine.makePlayer(with: pattern)
             try player.start(atTime: 0)
         } catch {

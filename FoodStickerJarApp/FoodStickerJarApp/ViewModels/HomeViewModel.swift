@@ -110,10 +110,8 @@ class HomeViewModel: ObservableObject {
             originalImageURLString: nil,
             isFood: nil,
             name: "Thinking...", // Placeholder name
-            funFact: nil,
-            nutrition: nil,
-            isSpecial: isSpecial, // Set immediately for the UI
-            specialContent: nil
+            description: nil,
+            isSpecial: isSpecial // Set immediately for the UI
         )
         
         print("[HomeViewModel] Preparing for animation. New sticker ID: \(stickerID). Is Special: \(isSpecial)")
@@ -170,23 +168,15 @@ class HomeViewModel: ObservableObject {
             case .success(let foodInfo):
                 finalItem.isFood = foodInfo.isFood
                 finalItem.name = foodInfo.name
-                finalItem.funFact = foodInfo.funFact
-                finalItem.nutrition = foodInfo.nutrition
+                finalItem.description = foodInfo.description
             case .failure(let error):
                 finalItem.isFood = false // If analysis fails, assume it's not food.
                 finalItem.name = "Analysis Failed"
+                finalItem.description = "Could not analyze this item. Please try again."
                 print("[HomeViewModel] Food analysis failed: \(error)")
             }
 
-            // 5a. If the item is special, fetch its story.
-            if finalItem.isSpecial == true, let name = finalItem.name, name != "N/A", name != "???" {
-                print("[HomeViewModel] Item is special. Fetching story for \(name)...")
-                // Since fetchSpecialContent is deprecated, we'll set a default story for now
-                finalItem.specialContent = "This is a rare and magical \(name) with a story yet to be told!"
-                print("[HomeViewModel] Special content set.")
-            }
-
-            // 6. Save the analysis data (and any special content) to Firestore.
+            // 6. Save the analysis data to Firestore.
             print("[HomeViewModel] Saving analysis data to Firestore...")
             try await firestoreService.updateSticker(finalItem, for: userId)
             

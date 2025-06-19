@@ -62,8 +62,7 @@ class FirestoreService {
             originalImageURLString: finalOriginalPhotoURL.absoluteString,
             isFood: nil,
             name: nil,
-            funFact: nil,
-            nutrition: nil,
+            description: nil,
             isSpecial: isSpecial
         )
         
@@ -88,9 +87,7 @@ class FirestoreService {
         try await stickerDocument.setData([
             "isFood": sticker.isFood as Any,
             "name": sticker.name as Any,
-            "funFact": sticker.funFact as Any,
-            "nutrition": sticker.nutrition as Any,
-            "specialContent": sticker.specialContent as Any
+            "description": sticker.description as Any
         ], merge: true)
         
         print("✅ FirestoreService: Successfully updated sticker \(sticker.id.uuidString) with analysis data.")

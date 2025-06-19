@@ -16,32 +16,6 @@ struct FoodDetailView: View {
     
     @State private var showContent = false
     
-    // A static, efficient array of messages for unidentifiable items.
-    private static let unidentifiableMessages = [
-        "You better not eat that.",
-        "Let's not feed this to anyone.",
-        "Might be food. Might be art.",
-        "It's a mystery.",
-        "Calories: undefined. Courage: required.",
-        "Chef, we have a situation.",
-        "My algorithm is confused. And a little scared.",
-        "On a scale of 1 to food, this is a 0.",
-        "Could be delicious...if you're an alien.",
-        "Hopefully you have not ingested this.",
-        "Just to remind you this is your food jar, not your poison control center.",
-        "Blink twice if you need help.",
-        "For your safety, and mine, let's not.",
-        "Debatable food choice.",
-        "Let's call this one \"Abstract Cuisine\".",
-        "Is it cake?",
-        "The plot thickens...",
-        "This looks like it has a backstory.",
-        "Best served... on a shelf.",
-    ]
-    
-    // Use @State to select a random message once and keep it stable.
-    @State private var randomNotFoodMessage: String = unidentifiableMessages.randomElement() ?? "You better not eat that."
-    
     var body: some View {
         // This guard makes the view crash-proof. If the binding becomes nil
         // during a dismiss animation, it shows an empty view instead of crashing.
@@ -102,54 +76,37 @@ struct FoodDetailView: View {
 
                         // Info Section
                         VStack(spacing: 16) {
-                            // Name and Date
-                            VStack {
-                                if let name = foodItem.name {
-                                    Text(name)
-                                        .font(.system(size: 32, weight: .bold, design: .serif))
-                                } else {
-                                    // Show a loading/analyzing state
-                                    Text("Thinking...")
-                                        .font(.system(size: 24, weight: .semibold, design: .serif))
-                                }
+                            // Name
+                            if let name = foodItem.name {
+                                Text(name)
+                                    .font(.system(size: 32, weight: .bold, design: .serif))
+                                    .multilineTextAlignment(.center)
+                            } else {
+                                // Show a loading/analyzing state
+                                Text("Thinking...")
+                                    .font(.system(size: 24, weight: .semibold, design: .serif))
                             }
-                            .multilineTextAlignment(.center)
-                            .padding(.bottom, 10)
                             
+                            // --- RARE STICKER BANNER ---
+                            // This section only appears if the item is marked as special.
+                            if foodItem.isSpecial == true {
+                                RareStickerBanner()
+                                    .padding(.top, -5) // Pull the banner up a bit
+                            }
+
                             Divider()
+                                .padding(.bottom, 5)
                             
-                            // Details
-                            if foodItem.isFood == true {
-                                // Case: It's a food item. Display nutrition info in the unified format.
-                                if let nutrition = foodItem.nutrition, nutrition != "N/A" {
-                                    Text(nutrition)
-                                        .font(.custom("Georgia", size: 17))
-                                        .foregroundColor(.secondary)
-                                        .multilineTextAlignment(.center)
-                                        .padding(.top)
-                                } else {
-                                    // This can happen if analysis is still processing for a food item.
-                                    ProgressView()
-                                        .padding(.top)
-                                }
-                            } else if foodItem.isFood == false {
-                                // Case: Not a food item (or unidentifiable).
-                                Text(randomNotFoodMessage)
+                            // --- UNIFIED DESCRIPTION ---
+                            if let description = foodItem.description {
+                                Text(description)
                                     .font(.custom("Georgia", size: 17))
                                     .foregroundColor(.secondary)
                                     .multilineTextAlignment(.center)
-                                    .padding(.top)
                             } else {
-                                // Case: Still loading (isFood is nil).
+                                // Case: Still loading description from backend.
                                 ProgressView()
                                     .padding(.top)
-                            }
-                            
-                            // --- SPECIAL CONTENT SECTION ---
-                            // This section only appears if the item is marked as special.
-                            if foodItem.isSpecial == true {
-                                SpecialContentView(content: foodItem.specialContent)
-                                    .padding(.top, 10)
                             }
                         }
                         .padding(.horizontal, 30)
@@ -191,45 +148,27 @@ struct FoodDetailView: View {
     }
 }
 
-/// A helper view for displaying the exclusive content for a "special" food item.
-private struct SpecialContentView: View {
-    let content: String?
-    
+/// A helper view for the "Rare Sticker" banner.
+private struct RareStickerBanner: View {
     var body: some View {
-        HStack(spacing: 12) {
-            // The vertical line on the left of the quote block
-            Rectangle()
-                .fill(Color.orange.opacity(0.6))
-                .frame(width: 3)
-            
-            VStack(alignment: .leading, spacing: 8) { // Reduced spacing for a tighter block
-                HStack {
-                    Image(systemName: "sparkles")
-                        .foregroundColor(.orange)
-                    Text("A Rare Sticker!")
-                        .font(.headline)
-                        .foregroundColor(.secondary)
-                }
-                
-                if let content = content {
-                    // If we have the content, display it.
-                    Text(content)
-                        .font(.custom("Georgia", size: 17))
-                } else {
-                    // If content is nil, it's still loading.
-                    HStack(spacing: 10) {
-                        ProgressView()
-                        Text("Unraveling its story...")
-                            .font(.custom("Georgia-Italic", size: 16))
-                            .foregroundColor(.secondary)
-                    }
-                }
-            }
+        HStack {
+            Image(systemName: "sparkles")
+            Text("Rare Sticker!")
+            Image(systemName: "sparkles")
         }
-        .padding(.vertical, 12)
-        .padding(.horizontal, 10)
-        .background(Color.black.opacity(0.04))
-        .cornerRadius(8)
+        .font(.system(size: 16, weight: .semibold, design: .rounded))
+        .padding(.horizontal, 12)
+        .padding(.vertical, 6)
+        .background(
+            // Create a gradient background for the capsule
+            LinearGradient(
+                gradient: Gradient(colors: [Color.yellow.opacity(0.4), Color.orange.opacity(0.6)]),
+                startPoint: .leading,
+                endPoint: .trailing
+            )
+        )
+        .cornerRadius(15)
+        .foregroundColor(.black.opacity(0.7))
     }
 }
 
