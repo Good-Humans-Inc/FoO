@@ -30,21 +30,28 @@ struct OnboardingView: View {
             switch currentStep {
             case .welcome:
                 WelcomeView {
-                    // When continue is tapped in the welcome view,
-                    // advance to the next step with an animation.
-                    withAnimation {
-                        currentStep = .intro
-                    }
+                    withAnimation { currentStep = .intro }
                 }
                 .transition(.asymmetric(insertion: .move(edge: .trailing), removal: .move(edge: .leading)))
+                
             case .intro:
                 IntroCarouselView {
-                    // When the carousel is finished, advance to the next step.
-                    withAnimation {
-                        currentStep = .name
-                    }
+                    withAnimation { currentStep = .name }
                 }
                 .transition(.asymmetric(insertion: .move(edge: .trailing), removal: .move(edge: .leading)))
+                
+            case .name:
+                NameInputView(name: $viewModel.name) {
+                    withAnimation { currentStep = .age }
+                }
+                .transition(.asymmetric(insertion: .move(edge: .trailing), removal: .move(edge: .leading)))
+                
+            case .age:
+                AgeInputView(age: $viewModel.age) {
+                    withAnimation { currentStep = .pronoun }
+                }
+                .transition(.asymmetric(insertion: .move(edge: .trailing), removal: .move(edge: .leading)))
+                
             default:
                 // A single placeholder for all subsequent steps.
                 VStack {
