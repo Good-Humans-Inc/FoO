@@ -10,6 +10,9 @@ struct FoodStickerJarApp: App {
     @StateObject private var authService = AuthenticationService.shared
     @StateObject private var appState = AppStateManager.shared
 
+    // Environment variable to track the app's scene phase.
+    @Environment(\.scenePhase) private var scenePhase
+
     var body: some Scene {
         WindowGroup {
             if !appState.isInitialized {
@@ -28,6 +31,13 @@ struct FoodStickerJarApp: App {
             } else {
                 // Show a loading view while Firebase is authenticating the user.
                 ProgressView()
+            }
+        }
+        .onChange(of: scenePhase) { oldPhase, newPhase in
+            if newPhase == .active {
+                // When the app becomes active, clear the badge.
+                UIApplication.shared.applicationIconBadgeNumber = 0
+                print("-[FCM_DEBUG] Scene became active. Cleared application badge number via scenePhase.")
             }
         }
     }

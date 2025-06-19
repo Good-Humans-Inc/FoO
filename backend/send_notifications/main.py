@@ -63,6 +63,11 @@ def send_daily_notification(request):
 
     print(f"Found {len(tokens)} tokens to send notifications to.")
 
+    # APNS-specific configuration to set the app icon badge.
+    apns_payload = messaging.APNSPayload(
+        aps=messaging.Aps(badge=1)
+    )
+
     # 4. Construct and send the notification message.
     message = messaging.MulticastMessage(
         notification=messaging.Notification(
@@ -70,6 +75,7 @@ def send_daily_notification(request):
             body='Don\'t forget to add your food today! 👑'
         ),
         tokens=tokens,
+        apns=messaging.APNSConfig(payload=apns_payload)
     )
 
     try:
