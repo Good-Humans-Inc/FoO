@@ -1,0 +1,6 @@
+# Firebase
+firebase-functions
+firebase-admin
+
+# Google Cloud AI for Gemini
+google-cloud-aiplatform 
