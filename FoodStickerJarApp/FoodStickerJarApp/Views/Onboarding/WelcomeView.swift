@@ -20,9 +20,9 @@ struct WelcomeView: View {
             
             Text("Jas")
                 .font(.system(size: 60, weight: .bold, design: .serif))
-                .foregroundColor(Color(red: 236/255, green: 138/255, blue: 83/255))
-                .scaleEffect(logoIsVisible ? 1 : 0.5)
-                .opacity(logoIsVisible ? 1 : 0)
+                .foregroundColor(.themeAccent)
+                .scaleEffect(logoIsVisible ? 1.0 : 0.8)
+                .opacity(logoIsVisible ? 1.0 : 0.0)
             
             Spacer()
             
@@ -32,7 +32,7 @@ struct WelcomeView: View {
                     .foregroundColor(.white)
                     .padding()
                     .frame(maxWidth: .infinity)
-                    .background(Color(red: 236/255, green: 138/255, blue: 83/255))
+                    .background(Color.themeAccent)
                     .cornerRadius(12)
                     .shadow(color: .black.opacity(0.15), radius: 8, y: 4)
             }
@@ -46,11 +46,12 @@ struct WelcomeView: View {
                 titleIsVisible = true
             }
             
-            withAnimation(.spring(response: 0.6, dampingFraction: 0.5).delay(0.3)) {
+            // The "pop" animation for the logo. A spring animation gives it a nice bounce.
+            withAnimation(.spring(response: 0.5, dampingFraction: 0.5, blendDuration: 0).delay(0.2)) {
                 logoIsVisible = true
             }
             
-            withAnimation(.easeIn(duration: 0.5).delay(0.8)) {
+            withAnimation(.easeIn(duration: 0.5).delay(0.6)) {
                 buttonIsVisible = true
             }
         }

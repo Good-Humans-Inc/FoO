@@ -127,7 +127,7 @@ private struct FeedbackInputView: View {
             Button(action: onSubmit) {
                 Image(systemName: "arrow.up.circle.fill")
                     .font(.system(size: 28, weight: .bold))
-                    .foregroundColor(feedbackText.isEmpty ? .gray : Color(red: 236/255, green: 138/255, blue: 83/255))
+                    .foregroundColor(feedbackText.isEmpty ? .gray : .themeAccent)
             }
             .disabled(feedbackText.isEmpty)
         }

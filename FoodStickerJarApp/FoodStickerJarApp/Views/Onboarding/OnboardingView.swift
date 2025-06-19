@@ -23,7 +23,7 @@ struct OnboardingView: View {
     var body: some View {
         ZStack {
             // A background for the entire onboarding flow.
-            Color(red: 253/255, green: 249/255, blue: 240/255)
+            Color.themeBackground
                 .ignoresSafeArea()
 
             // Switch on the current step to show the correct view.

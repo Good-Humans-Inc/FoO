@@ -6,7 +6,7 @@ struct LaunchLoadingView: View {
     var body: some View {
         ZStack {
             // The signature warm background color of the app.
-            Color(red: 253/255, green: 249/255, blue: 240/255)
+            Color.themeBackground
                 .ignoresSafeArea()
             
             Image("LogoIcon")
