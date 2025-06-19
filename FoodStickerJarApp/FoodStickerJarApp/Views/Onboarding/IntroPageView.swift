@@ -14,11 +14,10 @@ struct IntroPageView: View {
 
     var body: some View {
         VStack(spacing: 20) {
-            Image(systemName: page.imageName)
+            Image(page.imageName)
                 .resizable()
                 .scaledToFit()
-                .frame(width: 100, height: 100)
-                .foregroundColor(.themeAccent)
+                .frame(width: 250, height: 250)
                 .padding(.bottom, 30)
 
             Text(page.headline)

@@ -144,8 +144,7 @@ class HomeViewModel: ObservableObject {
             name: "Thinking...", // Placeholder name
             funFact: nil,
             nutrition: nil,
-            isSpecial: isSpecial, // Set immediately for the UI
-            specialContent: nil
+            isSpecial: isSpecial // Set immediately for the UI
         )
         
         print("[HomeViewModel] Preparing for animation. New sticker ID: \(stickerID). Is Special: \(isSpecial)")
@@ -221,22 +220,12 @@ class HomeViewModel: ObservableObject {
                 finalItem.name = "Analysis Failed"
                 print("❌ [HomeViewModel] Food analysis failed. Error: \(error.localizedDescription)")
                 // Log the detailed error for debugging
-                if let analysisError = error as? FoodAnalysisService.AnalysisError {
-                    switch analysisError {
-                    case .decodingError(let decodingError):
-                        print("❌ [HomeViewModel] Decoding Error Details: \(decodingError)")
-                    default:
-                        break // Other errors are already descriptive enough
-                    }
+                switch error {
+                case .decodingError(let decodingError):
+                    print("❌ [HomeViewModel] Decoding Error Details: \(decodingError)")
+                default:
+                    break // Other errors are already descriptive enough
                 }
-            }
-
-            // 5a. If the item is special, fetch its story.
-            if finalItem.isSpecial == true, let name = finalItem.name, name != "N/A", name != "???" {
-                print("[HomeViewModel] Item is special. Fetching story for \(name)...")
-                // Since fetchSpecialContent is deprecated, we'll set a default story for now
-                finalItem.specialContent = "This is a rare and magical \(name) with a story yet to be told!"
-                print("[HomeViewModel] Special content set.")
             }
 
             // 6. Save the analysis data (and any special content) to Firestore.

@@ -120,9 +120,9 @@ struct FoodDetailView: View {
                             
                             // Details
                             if foodItem.isFood == true {
-                                // Case: It's a food item. Display nutrition info in the unified format.
-                                if let nutrition = foodItem.nutrition, nutrition != "N/A" {
-                                    Text(nutrition)
+                                // Case: It's a food item. Display fun fact/story in a unified format.
+                                if let funFact = foodItem.funFact, !funFact.isEmpty {
+                                    Text(funFact)
                                         .font(.custom("Georgia", size: 17))
                                         .foregroundColor(.secondary)
                                         .multilineTextAlignment(.center)
@@ -135,7 +135,7 @@ struct FoodDetailView: View {
                             } else if foodItem.isFood == false {
                                 // Case: Not a food item (or unidentifiable).
                                 Text(randomNotFoodMessage)
-                                    .font(.custom("Georgia", size: 17))
+                                    .font(.custom("Georgia", size:17))
                                     .foregroundColor(.secondary)
                                     .multilineTextAlignment(.center)
                                     .padding(.top)
@@ -143,13 +143,6 @@ struct FoodDetailView: View {
                                 // Case: Still loading (isFood is nil).
                                 ProgressView()
                                     .padding(.top)
-                            }
-                            
-                            // --- SPECIAL CONTENT SECTION ---
-                            // This section only appears if the item is marked as special.
-                            if foodItem.isSpecial == true {
-                                SpecialContentView(content: foodItem.specialContent)
-                                    .padding(.top, 10)
                             }
                         }
                         .padding(.horizontal, 30)
@@ -188,48 +181,6 @@ struct FoodDetailView: View {
             // This ProgressView is shown if the item becomes nil, preventing the crash.
             ProgressView()
         }
-    }
-}
-
-/// A helper view for displaying the exclusive content for a "special" food item.
-private struct SpecialContentView: View {
-    let content: String?
-    
-    var body: some View {
-        HStack(spacing: 12) {
-            // The vertical line on the left of the quote block
-            Rectangle()
-                .fill(Color.orange.opacity(0.6))
-                .frame(width: 3)
-            
-            VStack(alignment: .leading, spacing: 8) { // Reduced spacing for a tighter block
-                HStack {
-                    Image(systemName: "sparkles")
-                        .foregroundColor(.orange)
-                    Text("A Rare Sticker!")
-                        .font(.headline)
-                        .foregroundColor(.secondary)
-                }
-                
-                if let content = content {
-                    // If we have the content, display it.
-                    Text(content)
-                        .font(.custom("Georgia", size: 17))
-                } else {
-                    // If content is nil, it's still loading.
-                    HStack(spacing: 10) {
-                        ProgressView()
-                        Text("Unraveling its story...")
-                            .font(.custom("Georgia-Italic", size: 16))
-                            .foregroundColor(.secondary)
-                    }
-                }
-            }
-        }
-        .padding(.vertical, 12)
-        .padding(.horizontal, 10)
-        .background(Color.black.opacity(0.04))
-        .cornerRadius(8)
     }
 }
 
