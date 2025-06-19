@@ -3,13 +3,13 @@ import CoreImage
 import CoreImage.CIFilterBuiltins
 
 extension UIImage {
-    /// Applies a "sticker" effect by adding a solid, opaque outline and filling any transparent "holes".
-    /// This implementation uses a UIGraphicsImageRenderer for pixel-perfect layout to prevent clipping.
+    /// Applies a "sticker" effect by adding an outline and filling any transparent "holes".
+    /// The outline is a solid white color for normal stickers, and a pastel rainbow gradient for special ones.
     /// - Parameters:
     ///   - width: The desired width of the outline.
-    ///   - color: The color of the outline.
+    ///   - isSpecial: Determines whether to apply the special rainbow effect.
     /// - Returns: A new `UIImage` with the sticker effect, or `nil` if processing fails.
-    func addingStickerOutline(width: CGFloat, color: UIColor) -> UIImage? {
+    func addingStickerEffect(width: CGFloat, isSpecial: Bool) -> UIImage? {
         guard let originalCiImage = CIImage(image: self) else { return nil }
         let context = CIContext()
 
@@ -31,28 +31,63 @@ extension UIImage {
         morphologyFilter.radius = Float(width)
         guard let stickerShape = morphologyFilter.outputImage else { return nil }
         
-        // Color the sticker base shape with the desired solid color.
-        let solidColor = CIImage(color: CIColor(color: color))
-        let stickerBaseCiImage = solidColor.applyingFilter("CIBlendWithMask", parameters: [
-            kCIInputMaskImageKey: stickerShape
-        ])
-        
         // --- Step 2: Use UIGraphicsImageRenderer for robust final compositing ---
         
-        // --- FIX: Create the final canvas based on the sticker shape itself ---
-        // This is the key fix. It ensures the canvas is the exact size of the
-        // generated sticker outline, preventing alignment and clipping errors.
         let finalSize = stickerShape.extent.size
         let renderer = UIGraphicsImageRenderer(size: finalSize)
         
         let finalImage = renderer.image { ctx in
-            // Render the CIImage of the sticker base to a CGImage.
-            guard let stickerBaseCgImage = context.createCGImage(stickerBaseCiImage, from: stickerShape.extent) else { return }
-            
-            // Draw the sticker base at the origin of the new canvas. It will fill it perfectly.
-            UIImage(cgImage: stickerBaseCgImage).draw(at: .zero)
+            // --- Step 2a: Draw the correct background (solid white or rainbow) ---
+            if isSpecial {
+                // For special items, draw a pastel rainbow gradient.
+                
+                // Save the graphics state before clipping so it can be restored later.
+                ctx.cgContext.saveGState()
+                
+                // --- FIX: Flip the context vertically to match Core Image's coordinate system. ---
+                // This is necessary because the mask is created from a CIImage (bottom-left origin)
+                // but is being applied in a Core Graphics context (top-left origin).
+                ctx.cgContext.translateBy(x: 0, y: finalSize.height)
+                ctx.cgContext.scaleBy(x: 1.0, y: -1.0)
+                
+                // Define the pastel colors based on the reference images.
+                let pastelColors = [
+                    UIColor(red: 1.00, green: 0.69, blue: 0.69, alpha: 1.0), // Light Pink/Red
+                    UIColor(red: 1.00, green: 0.84, blue: 0.69, alpha: 1.0), // Light Orange
+                    UIColor(red: 1.00, green: 1.00, blue: 0.69, alpha: 1.0), // Light Yellow
+                    UIColor(red: 0.69, green: 1.00, blue: 0.84, alpha: 1.0), // Light Green/Mint
+                    UIColor(red: 0.69, green: 0.84, blue: 1.00, alpha: 1.0), // Light Blue
+                    UIColor(red: 0.84, green: 0.69, blue: 1.00, alpha: 1.0)  // Light Purple/Lavender
+                ].map { $0.cgColor }
 
-            // Finally, draw the original image on top, offset by the border width to center it.
+                // Create the gradient.
+                let colorSpace = CGColorSpaceCreateDeviceRGB()
+                // Render the CIImage of the sticker shape to a CGImage to use as a mask.
+                if let gradient = CGGradient(colorsSpace: colorSpace, colors: pastelColors as CFArray, locations: nil),
+                   let stickerMaskCgImage = context.createCGImage(stickerShape, from: stickerShape.extent) {
+                    
+                    // Clip the drawing context to the shape of the sticker outline.
+                    ctx.cgContext.clip(to: CGRect(origin: .zero, size: finalSize), mask: stickerMaskCgImage)
+                    
+                    // Draw the gradient into the newly clipped (and flipped) area.
+                    ctx.cgContext.drawLinearGradient(gradient, start: CGPoint(x: 0, y: 0), end: CGPoint(x: 0, y: finalSize.height), options: [])
+                }
+                
+                // Restore the original graphics state, which removes the clipping mask and the flip transform.
+                ctx.cgContext.restoreGState()
+
+            } else {
+                // For normal items, use the original solid white outline method.
+                let solidColor = CIImage(color: CIColor(color: .white))
+                let stickerBaseCiImage = solidColor.applyingFilter("CIBlendWithMask", parameters: [
+                    kCIInputMaskImageKey: stickerShape
+                ])
+                guard let stickerBaseCgImage = context.createCGImage(stickerBaseCiImage, from: stickerShape.extent) else { return }
+                UIImage(cgImage: stickerBaseCgImage).draw(at: .zero)
+            }
+            
+            // --- Step 2b: Draw the original image on top ---
+            // This is offset by the border width to center it within the new, larger canvas.
             self.draw(at: CGPoint(x: width, y: width))
         }
         

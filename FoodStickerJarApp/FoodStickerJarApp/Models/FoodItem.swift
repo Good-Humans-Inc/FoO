@@ -12,9 +12,9 @@ struct FoodItem: Identifiable, Codable, Equatable, Hashable {
     
     // The image data is no longer stored directly in the document.
     // Instead, we store the URLs pointing to the images in Firebase Storage.
-    let imageURLString: String
-    let thumbnailURLString: String
-    let originalImageURLString: String?
+    var imageURLString: String
+    var thumbnailURLString: String
+    var originalImageURLString: String?
     
     // Properties for food analysis data from the backend.
     // They are optional because they will be populated asynchronously.
@@ -22,4 +22,10 @@ struct FoodItem: Identifiable, Codable, Equatable, Hashable {
     var name: String?
     var funFact: String?
     var nutrition: String?
+    
+    // A flag to determine if the item has special, rare content.
+    var isSpecial: Bool?
+    
+    // A whimsical story or poem, only for special items.
+    var specialContent: String?
 }

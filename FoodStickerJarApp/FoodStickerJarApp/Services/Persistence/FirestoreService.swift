@@ -4,7 +4,9 @@ import FirebaseFirestore
 /// A service dedicated to handling all Firestore database operations.
 class FirestoreService {
     
-    // Get a reference to the Firestore database.
+    // --- CONFIGURATION ---
+    // The probability (0.0 to 1.0) that a newly created sticker will be "special".
+    // A reference to the Firestore database.
     private let db = Firestore.firestore()
     // The service for handling file uploads.
     private let storageService = FirebaseStorageService()
@@ -12,13 +14,16 @@ class FirestoreService {
     /// Creates a new food sticker by first uploading its images to Firebase Storage
     /// and then saving the resulting URL metadata to Firestore.
     /// - Parameters:
+    ///   - id: The ID of the sticker being created.
     ///   - originalImage: The original `UIImage` from the camera.
     ///   - stickerImage: The sticker `UIImage` to be processed and saved.
     ///   - userID: The ID of the currently authenticated user.
+    ///   - isSpecial: A boolean indicating if the sticker should be marked as special.
     /// - Returns: The fully constructed `FoodItem` with URLs pointing to the stored images.
-    func createSticker(originalImage: UIImage, stickerImage: UIImage, for userID: String) async throws -> FoodItem {
-        let stickerID = UUID()
+    func createSticker(id stickerID: UUID, originalImage: UIImage, stickerImage: UIImage, for userID: String, isSpecial: Bool) async throws -> FoodItem {
         let creationDate = Date()
+        
+        print("[FirestoreService] New sticker being created. Is special: \(isSpecial)")
         
         // Prepare image data for sticker and thumbnail.
         guard let stickerImageData = stickerImage.pngData() else {
@@ -55,9 +60,11 @@ class FirestoreService {
             imageURLString: finalImageURL.absoluteString,
             thumbnailURLString: finalThumbnailURL.absoluteString,
             originalImageURLString: finalOriginalPhotoURL.absoluteString,
+            isFood: nil,
             name: nil,
             funFact: nil,
-            nutrition: nil
+            nutrition: nil,
+            isSpecial: isSpecial
         )
         
         // Save the metadata object to Firestore.
@@ -82,7 +89,8 @@ class FirestoreService {
             "isFood": sticker.isFood as Any,
             "name": sticker.name as Any,
             "funFact": sticker.funFact as Any,
-            "nutrition": sticker.nutrition as Any
+            "nutrition": sticker.nutrition as Any,
+            "specialContent": sticker.specialContent as Any
         ], merge: true)
         
         print("✅ FirestoreService: Successfully updated sticker \(sticker.id.uuidString) with analysis data.")
