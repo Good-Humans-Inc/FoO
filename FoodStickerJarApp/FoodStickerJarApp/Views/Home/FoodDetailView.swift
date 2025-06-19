@@ -109,7 +109,7 @@ struct FoodDetailView: View {
                                         .font(.system(size: 32, weight: .bold, design: .serif))
                                 } else {
                                     // Show a loading/analyzing state
-                                    Text("Thinking...")
+                                    Text("Casting spell......")
                                         .font(.system(size: 24, weight: .semibold, design: .serif))
                                 }
                             }

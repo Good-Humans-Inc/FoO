@@ -141,7 +141,7 @@ class HomeViewModel: ObservableObject {
             thumbnailURLString: "", // Will be populated by the background task
             originalImageURLString: nil,
             isFood: nil,
-            name: "Thinking...", // Placeholder name
+            name: "Casting spell......", // Placeholder name
             funFact: nil,
             nutrition: nil,
             isSpecial: isSpecial // Set immediately for the UI
