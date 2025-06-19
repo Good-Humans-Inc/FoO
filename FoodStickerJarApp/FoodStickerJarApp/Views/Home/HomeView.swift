@@ -134,6 +134,11 @@ struct HomeView: View {
                                 self.jarViewSize = geo.size
                                 let spriteViewSize = CGSize(width: geo.size.width * 0.78, height: geo.size.width * 1.8 * 0.72)
                                 viewModel.setupScene(with: spriteViewSize)
+                                
+                                // If the view appears and there are no items, ensure the scene is visually cleared.
+                                if viewModel.foodItems.isEmpty {
+                                    viewModel.clearJarView()
+                                }
                             }
                             .onChange(of: geo.size) { newSize in
                                 self.jarViewSize = newSize
@@ -206,18 +211,6 @@ struct HomeView: View {
             }
             .navigationBarHidden(true)
             .frame(maxWidth: .infinity, maxHeight: .infinity)
-            // MARK: - Report Overlay
-            .overlay(
-                // The overlay is shown only when a new report is available.
-                Group {
-                    if let report = viewModel.newlyGeneratedReport {
-                        ReportParchmentView(reportText: report) {
-                            // The onDismiss closure clears the report from the view model.
-                            viewModel.newlyGeneratedReport = nil
-                        }
-                    }
-                }
-            )
         }
         .navigationViewStyle(.stack)
         // MARK: - Sheet Modifiers
@@ -240,6 +233,17 @@ struct HomeView: View {
         }) { _ in
             // Pass the single source-of-truth binding to the detail view.
             FoodDetailView(foodItem: itemForCover)
+        }
+        // A single, unified full-screen cover for presenting the report.
+        .fullScreenCover(isPresented: .constant(viewModel.newlyGeneratedReport != nil)) {
+            if let report = viewModel.newlyGeneratedReport {
+                ReportParchmentView(reportText: report) {
+                    // First, dismiss the report view.
+                    viewModel.newlyGeneratedReport = nil
+                    // Then, trigger the final animation sequence, clearing the stickers.
+                    viewModel.finalizeArchiving(clearLocalStickers: true)
+                }
+            }
         }
         // An alert to show if the saving process fails.
         .alert("Failed to Save Sticker", isPresented: .constant(viewModel.stickerCreationError != nil)) {

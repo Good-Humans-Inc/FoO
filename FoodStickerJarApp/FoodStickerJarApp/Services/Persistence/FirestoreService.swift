@@ -199,14 +199,13 @@ class FirestoreService {
         return newJarItem
     }
     
-    /// Fetches a collection of jars from Firestore based on their IDs.
-    /// - Parameters:
-    ///   - jarIDs: An array of jar document IDs to fetch.
+    /// Fetches all jars belonging to a specific user.
+    /// - Parameter userID: The ID of the user whose jars to fetch.
     /// - Returns: An array of `JarItem` objects.
-    func fetchJars(with jarIDs: [String]) async throws -> [JarItem] {
-        guard !jarIDs.isEmpty else { return [] }
-        
-        let querySnapshot = try await db.collection("jars").whereField(FieldPath.documentID(), in: jarIDs).getDocuments()
+    func fetchJars(for userID: String) async throws -> [JarItem] {
+        let querySnapshot = try await db.collection("jars")
+                                      .whereField("userID", isEqualTo: userID)
+                                      .getDocuments()
         
         let jars = try querySnapshot.documents.compactMap { document in
             try document.data(as: JarItem.self)

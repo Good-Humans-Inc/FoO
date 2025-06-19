@@ -19,43 +19,38 @@ class ShelfViewModel: ObservableObject {
             .compactMap { $0?.uid }
             .sink { [weak self] userID in
                 self?.userID = userID
-                self?.fetchJars(for: userID)
+                self?.fetchJars()
             }
             .store(in: &cancellables)
     }
     
-    func fetchJars(for userID: String) {
+    @MainActor
+    func fetchJars() {
+        guard let userID = self.userID else {
+            errorMessage = "Error: Not authenticated."
+            return
+        }
+        
         isLoading = true
-        errorMessage = nil
         
         Task {
             do {
-                let user = try await firestoreService.fetchUser(with: userID)
-                let jars = try await firestoreService.fetchJars(with: user.jarIDs)
-                
-                let jarDict: [String: JarItem] = Dictionary(uniqueKeysWithValues: jars.compactMap { jar in
-                    guard let id = jar.id else { return nil }
-                    return (id, jar)
-                })
-                
-                let sortedJars = user.jarIDs.compactMap { jarID in
-                    jarDict[jarID]
-                }
-                
-                self.jars = sortedJars
-                self.isLoading = false
+                let fetchedJars = try await firestoreService.fetchJars(for: userID)
+                // Sort jars chronologically, oldest to newest.
+                self.jars = fetchedJars.sorted { $0.timestamp.dateValue() < $1.timestamp.dateValue() }
+                self.errorMessage = nil
             } catch {
-                self.isLoading = false
-                self.errorMessage = "Failed to fetch jars: \(error.localizedDescription)"
-                print("Error fetching jars: \(error)")
+                self.errorMessage = "Error fetching jars: \(error.localizedDescription)"
+                print(self.errorMessage ?? "")
             }
+            isLoading = false
         }
     }
     
-    func submitFeedback(_ message: String) {
-        guard !message.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
+    func submitFeedback(_ text: String) {
+        guard !text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
             return
         }
-        feedbackService.submitFeedback(message: message)
+        feedbackService.submitFeedback(message: text)
     }
 } 

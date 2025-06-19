@@ -87,31 +87,15 @@ struct JarDetailView: View {
             )
             FoodDetailView(foodItem: binding)
         }
-        .sheet(isPresented: $showReport) {
-            ReportView(report: jar.report)
+        .fullScreenCover(isPresented: $showReport) {
+            ReportParchmentView(reportText: jar.report ?? "No report available.") {
+                showReport = false
+            }
         }
     }
 }
 
 // MARK: - Reusable Subviews
-
-private struct ReportView: View {
-    let report: String?
-    @Environment(\.dismiss) private var dismiss
-
-    var body: some View {
-        NavigationView {
-            ScrollView {
-                Text(report ?? "No report available for this week.")
-                    .padding()
-            }
-            .navigationTitle("Weekly Report")
-            .navigationBarItems(trailing: Button("Done") {
-                dismiss()
-            })
-        }
-    }
-}
 
 private struct FeedbackInputView: View {
     @Binding var feedbackText: String

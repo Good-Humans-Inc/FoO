@@ -12,6 +12,7 @@ class JarScene: SKScene, SKPhysicsContactDelegate {
     // A Combine publisher that will send the ID of a tapped sticker.
     // The HomeViewModel will subscribe to this.
     let onStickerTapped = PassthroughSubject<UUID, Never>()
+    var foodItemsById: [UUID: FoodItem] = [:]
     
     // Properties to handle dragging stickers
     private var draggedNode: SKNode?
@@ -123,61 +124,93 @@ class JarScene: SKScene, SKPhysicsContactDelegate {
     
     /// Removes all sticker nodes from the scene.
     func clear() {
-        // Find all nodes that are stickers and remove them from the scene.
-        self.children.filter { $0.physicsBody?.categoryBitMask == PhysicsCategory.sticker }.forEach { $0.removeFromParent() }
+        // Remove all sticker nodes from the scene
+        removeChildren(in: children.filter { $0.name?.starts(with: "sticker-") == true })
+        foodItemsById.removeAll()
     }
     
     /// Populates the jar with an initial set of stickers when the app loads.
     func populateJar(with items: [FoodItem]) {
         // Clear existing stickers before adding new ones.
-        self.children.filter { $0.physicsBody?.categoryBitMask == PhysicsCategory.sticker }.forEach { $0.removeFromParent() }
+        clear()
 
         for item in items {
             // Asynchronously load the image and add the sticker.
-            addSticker(item: item, isInitialPopulation: true)
+            addSticker(foodItem: item)
         }
     }
     
-    /// Adds a single new sticker, animating it falling from the top.
-    func addSticker(item: FoodItem, isInitialPopulation: Bool = false) {
-        guard let url = URL(string: item.thumbnailURLString) else { return }
+    /// Adds a new sticker to the scene, either from a provided UIImage or by downloading from a URL.
+    func addSticker(foodItem: FoodItem, image: UIImage? = nil) {
+        foodItemsById[foodItem.id] = foodItem
         
-        // Use Kingfisher to download the image from the URL.
-        ImageDownloader.default.downloadImage(with: url) { [weak self] result in
-            guard let self = self else { return }
-            
-            if case .success(let value) = result {
-                // Ensure UI updates are on the main thread.
-                DispatchQueue.main.async {
-                    let node = self.createStickerNode(for: item.id, image: value.image)
+        if let providedImage = image {
+            // If an image is provided directly (e.g., for the report scroll), use it.
+            let texture = SKTexture(image: providedImage)
+            let node = createStickerNode(for: foodItem, with: texture)
+            self.addChild(node)
+            // Start the new sticker at the top-center of the jar.
+            node.position = CGPoint(x: self.frame.midX, y: self.frame.maxY)
+            // Give the sticker a slight downward push to start its fall.
+            node.physicsBody?.velocity = CGVector(dx: 0, dy: -50)
+
+        } else {
+            // Otherwise, download the thumbnail from the URL for performance.
+            guard let url = URL(string: foodItem.thumbnailURLString) else { return }
+            KingfisherManager.shared.retrieveImage(with: url) { result in
+                switch result {
+                case .success(let value):
+                    let texture = SKTexture(image: value.image)
+                    let node = self.createStickerNode(for: foodItem, with: texture)
                     
-                    if isInitialPopulation {
-                        // Place existing stickers randomly inside the jar.
-                        node.position = CGPoint(
-                            x: CGFloat.random(in: self.frame.minX...self.frame.maxX),
-                            y: CGFloat.random(in: self.frame.minY...self.frame.maxY)
-                        )
-                    } else {
-                        // Start the new sticker at the top-center of the jar.
-                        node.position = CGPoint(x: self.frame.midX, y: self.frame.maxY)
-                        // Give the sticker a slight downward push to start its fall.
-                        node.physicsBody?.velocity = CGVector(dx: 0, dy: -50)
-                    }
+                    // Place existing stickers randomly inside the jar.
+                    node.position = CGPoint(
+                        x: CGFloat.random(in: self.frame.minX...self.frame.maxX),
+                        y: CGFloat.random(in: self.frame.minY...self.frame.maxY)
+                    )
                     
                     self.addChild(node)
+                case .failure(let error):
+                    print("Error downloading image for sticker: \(error)")
                 }
+            }
+        }
+    }
+
+    /// Animates all stickers to shrink and fade out, then calls a completion handler.
+    func animateStickersVanishing(completion: @escaping () -> Void) {
+        let stickerNodes = children.filter { $0.name?.starts(with: "sticker-") == true }
+        
+        guard !stickerNodes.isEmpty else {
+            completion()
+            return
+        }
+        
+        let shrinkAction = SKAction.scale(to: 0, duration: 0.5)
+        let fadeOutAction = SKAction.fadeOut(withDuration: 0.5)
+        let groupAction = SKAction.group([shrinkAction, fadeOutAction])
+        
+        // We want to call the completion only after the last sticker has finished animating.
+        let lastNode = stickerNodes.last
+        let completionAction = SKAction.run(completion)
+        let sequence = SKAction.sequence([groupAction, completionAction])
+        
+        for node in stickerNodes {
+            if node == lastNode {
+                node.run(sequence)
+            } else {
+                node.run(groupAction)
             }
         }
     }
 
     // MARK: - Private Helper Methods
     
-    private func createStickerNode(for id: UUID, image: UIImage) -> SKNode {
-        let texture = SKTexture(image: image)
+    private func createStickerNode(for foodItem: FoodItem, with texture: SKTexture) -> SKNode {
         let node = SKSpriteNode(texture: texture)
         
         // Use the UUID as the node's name for identification on tap.
-        node.name = id.uuidString
+        node.name = "sticker-\(foodItem.id.uuidString)"
         
         // Downsize the sticker slightly for a better fit in the jar.
         let scale: CGFloat = 0.9
@@ -185,7 +218,7 @@ class JarScene: SKScene, SKPhysicsContactDelegate {
         
         // Resize the sticker to a consistent *maximum* dimension, preserving its aspect ratio.
         let maxStickerDimension: CGFloat = 80.0
-        let aspectRatio = image.size.width / image.size.height
+        let aspectRatio = texture.size().width / texture.size().height
         var stickerSize: CGSize
         if aspectRatio > 1 { // Wider than tall
             stickerSize = CGSize(width: maxStickerDimension, height: maxStickerDimension / aspectRatio)
@@ -247,5 +280,11 @@ class JarScene: SKScene, SKPhysicsContactDelegate {
         boundaryNode.physicsBody?.friction = 0.0
         
         addChild(boundaryNode)
+    }
+    
+    // MARK: - Physics Contact Delegate
+    
+    func didBegin(_ contact: SKPhysicsContact) {
+        // Implement the logic for handling contact events
     }
 }

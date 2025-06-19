@@ -196,7 +196,7 @@ class HomeViewModel: ObservableObject {
         foodItems.append(itemToAdd)
         
         // 2. Add the sticker to the physics scene, triggering the animation.
-        jarScene.addSticker(item: itemToAdd)
+        jarScene.addSticker(foodItem: itemToAdd)
         
         // 3. Clear the temporary item to signify the commit is complete.
         stickerToCommit = nil
@@ -216,53 +216,88 @@ class HomeViewModel: ObservableObject {
     
     // MARK: - Archiving
     
+    @MainActor
     func archiveJar(with image: UIImage) async {
         showArchiveInProgress = true
         
-        guard let userId = self.userId else {
-            print("Error: User not authenticated.")
+        guard let userID = self.userId else {
+            print("❌ Cannot archive, user not authenticated.")
             showArchiveInProgress = false
             return
         }
         
-        guard !foodItems.isEmpty else {
-            print("Jar is empty, nothing to archive.")
-            showArchiveInProgress = false
-            return
-        }
+        let stickersToArchive = self.foodItems
         
-        guard let imageData = image.pngData() else {
-            print("Error: Could not convert image to PNG data.")
-            showArchiveInProgress = false
-            return
-        }
+        // We will clear the main foodItems array later, after the animation.
         
         do {
-            let imagePath = "jar_thumbnails/\(userId)/\(UUID().uuidString).png"
-            let imageURL = try await storageService.uploadImage(data: imageData, at: imagePath)
+            // First, upload the screenshot.
+            let url = try await storageService.uploadJarThumbnail(image, for: userID)
             
-            // Generate the report before archiving.
-            let report = try? await reportGenerationService.generateReport(for: foodItems)
+            // Second, try to generate the report.
+            let report = try? await reportGenerationService.generateReport(for: stickersToArchive)
             
-            // Pass the whole foodItems array and the report to the service.
-            let newJar = try await firestoreService.archiveJar(stickers: foodItems, screenshotURL: imageURL.absoluteString, for: userId, report: report)
+            // If a report was generated, show it. The animation will be triggered on dismiss.
+            if let report = report {
+                self.newlyGeneratedReport = report
+            } else {
+                // If no report was generated, trigger the final animation immediately.
+                self.finalizeArchiving(clearLocalStickers: true)
+            }
             
-            // Clear the jar
-            foodItems.removeAll()
-            jarScene.clear()
-            
-            print("Successfully archived jar.")
-            
-            // Set the report so the UI can display it.
-            self.newlyGeneratedReport = newJar.report
-            
+            // Third, save the jar document to Firestore.
+            let _ = try await firestoreService.archiveJar(
+                stickers: stickersToArchive,
+                screenshotURL: url.absoluteString,
+                for: userID,
+                report: report
+            )
         } catch {
-            print("Error archiving jar: \(error.localizedDescription)")
-            // Optionally, show an error to the user
+            // Handle errors, maybe show an alert to the user.
+            print("❌ Failed to archive jar: \(error.localizedDescription)")
+            // Restore the stickers if archiving failed.
+            self.foodItems = stickersToArchive
         }
         
         showArchiveInProgress = false
     }
+    
+    func finalizeArchiving(clearLocalStickers: Bool = false) {
+        if clearLocalStickers {
+            self.foodItems.removeAll()
+        }
+
+        guard let reportImage = UIImage(named: "reportScroll") else {
+            print("❌ Could not load reportScroll image asset.")
+            self.clearJarView()
+            return
+        }
+
+        let reportSticker = FoodItem(
+            id: UUID(),
+            creationDate: Date(),
+            imageURLString: "",
+            thumbnailURLString: "",
+            originalImageURLString: nil,
+            name: "Weekly Report"
+        )
+
+        jarScene.addSticker(foodItem: reportSticker, image: reportImage)
+        
+        // Schedule the jar clearing animation after a delay.
+        DispatchQueue.main.asyncAfter(deadline: .now() + 2.0) {
+            self.clearJarView()
+        }
+    }
+    
+    /// Triggers the visual-only animation to clear stickers from the jar.
+    func clearJarView() {
+        jarScene.animateStickersVanishing {
+            self.jarScene.clear()
+        }
+    }
+    
+    // MARK: - Snapshot and Archiving
     
     func initiateArchiving() {
         triggerSnapshot = true

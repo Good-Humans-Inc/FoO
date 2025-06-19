@@ -23,7 +23,7 @@ class ReportGenerationService {
             let data = ["foodItems": foodItemPayload]
             
             // Call the function and await its result.
-            let result = try await functions.httpsCallable("generate_report").call(["data": data])
+            let result = try await functions.httpsCallable("generate_report").call(data)
             
             // The report text is returned directly in the 'data' field of the response.
             if let reportText = result.data as? String {
