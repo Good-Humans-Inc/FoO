@@ -160,8 +160,9 @@ class FirestoreService {
     ///   - stickers: An array of `FoodItem` objects to be archived.
     ///   - screenshotURL: The URL of the jar's screenshot thumbnail.
     ///   - userID: The ID of the user archiving the jar.
+    ///   - report: An optional string containing the weekly report.
     /// - Returns: The newly created `JarItem`.
-    func archiveJar(stickers: [FoodItem], screenshotURL: String, for userID: String) async throws -> JarItem {
+    func archiveJar(stickers: [FoodItem], screenshotURL: String, for userID: String, report: String?) async throws -> JarItem {
         let newJarRef = db.collection("jars").document()
         let userRef = db.collection("users").document(userID)
         
@@ -171,7 +172,7 @@ class FirestoreService {
             timestamp: Timestamp(date: Date()),
             screenshotThumbnailURL: screenshotURL,
             stickers: stickers,
-            report: nil // Report can be added later if needed
+            report: report
         )
         
         let batch = db.batch()

@@ -29,6 +29,7 @@ class HomeViewModel: ObservableObject {
     @Published var stickerCreationError: String?
     @Published var showArchiveInProgress = false
     @Published var triggerSnapshot = false
+    @Published var newlyGeneratedReport: String?
     
     // MARK: - Services and Engine
     
@@ -44,6 +45,8 @@ class HomeViewModel: ObservableObject {
     private let feedbackService = FeedbackService()
     // The service for uploading files.
     private let storageService = FirebaseStorageService()
+    // The service for generating weekly reports.
+    private let reportGenerationService = ReportGenerationService()
     
     // Used to receive notifications from the JarScene when a sticker is tapped.
     private var cancellables = Set<AnyCancellable>()
@@ -238,14 +241,20 @@ class HomeViewModel: ObservableObject {
             let imagePath = "jar_thumbnails/\(userId)/\(UUID().uuidString).png"
             let imageURL = try await storageService.uploadImage(data: imageData, at: imagePath)
             
-            // Pass the whole foodItems array to the service.
-            _ = try await firestoreService.archiveJar(stickers: foodItems, screenshotURL: imageURL.absoluteString, for: userId)
+            // Generate the report before archiving.
+            let report = try? await reportGenerationService.generateReport(for: foodItems)
+            
+            // Pass the whole foodItems array and the report to the service.
+            let newJar = try await firestoreService.archiveJar(stickers: foodItems, screenshotURL: imageURL.absoluteString, for: userId, report: report)
             
             // Clear the jar
             foodItems.removeAll()
             jarScene.clear()
             
             print("Successfully archived jar.")
+            
+            // Set the report so the UI can display it.
+            self.newlyGeneratedReport = newJar.report
             
         } catch {
             print("Error archiving jar: \(error.localizedDescription)")

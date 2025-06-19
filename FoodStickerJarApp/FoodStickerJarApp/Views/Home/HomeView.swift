@@ -206,6 +206,18 @@ struct HomeView: View {
             }
             .navigationBarHidden(true)
             .frame(maxWidth: .infinity, maxHeight: .infinity)
+            // MARK: - Report Overlay
+            .overlay(
+                // The overlay is shown only when a new report is available.
+                Group {
+                    if let report = viewModel.newlyGeneratedReport {
+                        ReportParchmentView(reportText: report) {
+                            // The onDismiss closure clears the report from the view model.
+                            viewModel.newlyGeneratedReport = nil
+                        }
+                    }
+                }
+            )
         }
         .navigationViewStyle(.stack)
         // MARK: - Sheet Modifiers
