@@ -1,5 +1,6 @@
 import SwiftUI
 import Combine
+import UserNotifications
 
 // This class manages the state and logic for the HomeView.
 // @MainActor ensures that any changes to its @Published properties
@@ -63,6 +64,7 @@ class HomeViewModel: ObservableObject {
         // Scene communication needs to be set up immediately.
         // The scene itself will be populated once its size is known from the view.
         setupJarSceneCommunication()
+        setupAutoArchiveListeners()
         
         // Listen for the user to be authenticated.
         authService.$user
@@ -86,6 +88,23 @@ class HomeViewModel: ObservableObject {
     }
     
     // MARK: - Public Methods
+    
+    /// Sets up listeners for auto-archiving events.
+    private func setupAutoArchiveListeners() {
+        NotificationCenter.default.addObserver(
+            self,
+            selector: #selector(appDidBecomeActive),
+            name: UIApplication.didBecomeActiveNotification,
+            object: nil
+        )
+    }
+
+    @objc private func appDidBecomeActive() {
+        print("[HomeViewModel] App became active. Checking for weekly archive.")
+        Task {
+            await checkForAutoArchive(from: "weeklyCheck")
+        }
+    }
     
     /// Sets up the physics scene with the correct size and populates it with saved stickers.
     /// This should be called from the view once the layout is determined.
@@ -248,8 +267,20 @@ class HomeViewModel: ObservableObject {
         
         // 3. Clear all temporary state to signify the commit is complete.
         print("[HomeViewModel] Sticker committed. Clearing all temporary state.")
-        stickerToCommit = nil
-        newSticker = nil
+        self.newSticker = nil
+        self.stickerToCommit = nil
+
+        // 4. Check if the jar should be auto-archived.
+        Task {
+            await checkForAutoArchive(from: "stickerCommit")
+        }
+    }
+    
+    /// Called when the detail view is dismissed without creating a sticker.
+    /// This resets any temporary state.
+    func resetTemporaryState() {
+        self.newSticker = nil
+        self.stickerToCommit = nil
     }
     
     /// Submits user-provided feedback via the FeedbackService.
@@ -266,60 +297,77 @@ class HomeViewModel: ObservableObject {
     
     // MARK: - Archiving
     
-    @MainActor
-    func archiveJar(with image: UIImage) async {
-        showArchiveInProgress = true
+    /// Initiates the process of archiving the current jar.
+    func initiateArchiving() {
+        guard !foodItems.isEmpty else {
+            print("[HomeViewModel] No items to archive.")
+            return
+        }
         
-        guard let userID = self.userId else {
-            print("❌ Cannot archive, user not authenticated.")
+        showArchiveInProgress = true
+        triggerSnapshot = true
+    }
+    
+    /// The main function for creating a new jar from the existing stickers.
+    /// This is triggered by the `HomeView` after it captures a snapshot.
+    /// - Parameter image: The `UIImage` snapshot of the jar view.
+    func archiveJar(with image: UIImage) async {
+        guard let userId = self.userId, !foodItems.isEmpty else {
+            stickerCreationError = "Could not archive jar: user not logged in or no items in the jar."
             showArchiveInProgress = false
             return
         }
         
-        let stickersToArchive = self.foodItems
-        
-        // We will clear the main foodItems array later, after the animation.
-        
+        print("[HomeViewModel] Archiving jar with \(foodItems.count) stickers.")
+
         do {
-            // First, upload the screenshot.
-            let url = try await storageService.uploadJarThumbnail(image, for: userID)
+            // 1. Generate a report for the current set of stickers.
+            let report = try await reportGenerationService.generateReport(for: foodItems)
+            print("[HomeViewModel] Report generated successfully.")
             
-            // Second, try to generate the report.
-            let report = try? await reportGenerationService.generateReport(for: stickersToArchive)
-            
-            // If a report was generated, show it. The animation will be triggered on dismiss.
-            if let report = report {
-                self.newlyGeneratedReport = report
-            } else {
-                // If no report was generated, trigger the final animation immediately.
-                self.finalizeArchiving(clearLocalStickers: true)
+            // 2. Upload the jar's screenshot.
+            guard let imageData = image.jpegData(compressionQuality: 0.8) else {
+                throw NSError(domain: "ImageError", code: 0, userInfo: [NSLocalizedDescriptionKey: "Failed to get JPEG data from screenshot."])
             }
+            let imagePath = "screenshots/\(userId)/\(UUID().uuidString).jpg"
+            let screenshotURL = try await storageService.uploadImage(data: imageData, at: imagePath)
+            print("[HomeViewModel] Screenshot uploaded to \(screenshotURL).")
             
-            // Third, save the jar document to Firestore.
-            let _ = try await firestoreService.archiveJar(
-                stickers: stickersToArchive,
-                screenshotURL: url.absoluteString,
-                for: userID,
+            // 3. Create the new JarItem in Firestore and delete the old stickers.
+            let archivedJar = try await firestoreService.archiveJar(
+                stickers: foodItems,
+                screenshotURL: screenshotURL.absoluteString,
+                for: userId,
                 report: report
             )
+            
+            print("[HomeViewModel] Jar \(archivedJar.id ?? "N/A") successfully created in Firestore.")
+            
+            // 4. Update UI state on the main thread.
+            newlyGeneratedReport = report
+            
+            // 5. Update the last archive date
+            UserDefaults.standard.set(Date(), forKey: "lastArchiveDate")
+
         } catch {
-            // Handle errors, maybe show an alert to the user.
-            print("❌ Failed to archive jar: \(error.localizedDescription)")
-            // Restore the stickers if archiving failed.
-            self.foodItems = stickersToArchive
+            print("[HomeViewModel] Error archiving jar: \(error.localizedDescription)")
+            stickerCreationError = "Failed to archive the jar. Please try again. Error: \(error.localizedDescription)"
+            showArchiveInProgress = false
         }
-        
-        showArchiveInProgress = false
     }
     
-    func finalizeArchiving(clearLocalStickers: Bool = false) {
+    /// Clears the local state after the archiving process is complete.
+    func finalizeArchiving(clearLocalStickers: Bool) {
         if clearLocalStickers {
             self.foodItems.removeAll()
         }
-
+        
+        // Hide the progress indicator.
+        self.showArchiveInProgress = false
+        
         guard let reportImage = UIImage(named: "reportScroll") else {
-            print("❌ Could not load reportScroll image asset.")
-            self.clearJarView()
+            print("Could not load reportScroll image asset.")
+            self.clearJarView() // Clear without animation if image is missing
             return
         }
 
@@ -336,24 +384,52 @@ class HomeViewModel: ObservableObject {
         
         // Schedule the jar clearing animation after a delay.
         DispatchQueue.main.asyncAfter(deadline: .now() + 2.0) {
-            self.clearJarView()
+            self.animateAndClearJar()
         }
     }
     
-    /// Triggers the visual-only animation to clear stickers from the jar.
-    func clearJarView() {
+    private func animateAndClearJar() {
         jarScene.animateStickersVanishing {
             self.jarScene.clear()
         }
     }
-    
-    // MARK: - Snapshot and Archiving
-    
-    func initiateArchiving() {
-        triggerSnapshot = true
+
+    /// Clears all stickers from the jar view without animation.
+    func clearJarView() {
+        jarScene.clear()
     }
     
-    // MARK: - Private Methods
+    // MARK: - Private Helper Methods
+    
+    private func checkForAutoArchive(from source: String) async {
+        print("[HomeViewModel] Checking for auto-archive, triggered by: \(source).")
+        
+        let stickerCount = foodItems.count
+        let isJarFull = stickerCount > 21
+        
+        // Weekly Check Logic
+        let calendar = Calendar.current
+        let today = Date()
+        let isSunday = calendar.component(.weekday, from: today) == 1 // 1 is Sunday
+        
+        var shouldWeeklyArchive = false
+        if isSunday {
+            if let lastArchive = UserDefaults.standard.object(forKey: "lastArchiveDate") as? Date {
+                // If it's Sunday, check if the last archive was before the most recent Sunday.
+                if !calendar.isDate(lastArchive, inSameDayAs: today) && lastArchive < today {
+                    shouldWeeklyArchive = true
+                }
+            } else {
+                // If we've never archived, and it's Sunday, do it.
+                shouldWeeklyArchive = true
+            }
+        }
+        
+        if isJarFull || shouldWeeklyArchive {
+            print("[HomeViewModel] Auto-archive condition met. Jar full: \(isJarFull), Weekly archive: \(shouldWeeklyArchive).")
+            initiateArchiving()
+        }
+    }
     
     /// Loads the user's stickers from Firestore and populates the physics scene.
     private func loadStickersFromFirestore() async {

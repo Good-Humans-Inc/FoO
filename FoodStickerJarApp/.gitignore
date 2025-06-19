@@ -1,1 +1,14 @@
 .hypothesis/
+
+# macOS
+.DS_Store
+
+# Python
+venv/
+__pycache__/
+
+# Xcode
+*.xcuserstate
+*.xcworkspace/xcuserdata/
+
+./.build

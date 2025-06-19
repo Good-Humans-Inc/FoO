@@ -51,6 +51,13 @@ struct HomeView: View {
                                 .frame(width: 84, height: 84)
                                 .clipShape(Circle())
                         }
+                        .simultaneousGesture(
+                            LongPressGesture(minimumDuration: 5)
+                                .onEnded { _ in
+                                    print("Backdoor: Long press detected. Initiating archive.")
+                                    viewModel.initiateArchiving()
+                                }
+                        )
                         
                         if showFeedbackInput {
                             // Custom Feedback Input Area
@@ -99,16 +106,6 @@ struct HomeView: View {
                         Spacer()
                         
                         if !showFeedbackInput {
-                            // Archive button
-                            Button(action: {
-                                viewModel.initiateArchiving()
-                            }) {
-                                Image(systemName: "archivebox.fill")
-                                    .font(.system(size: 28, weight: .bold))
-                                    .foregroundColor(Color(red: 236/255, green: 138/255, blue: 83/255))
-                            }
-                            .padding(.trailing, 10)
-                            
                             NavigationLink(destination: ShelfView()) {
                                 Image("shelfIcon") // Make sure this asset exists
                                     .resizable()
@@ -225,6 +222,7 @@ struct HomeView: View {
             // After the cover is dismissed, ask the view model to commit the new
             // sticker if one exists. This handles the drop-in-jar animation.
             viewModel.commitNewStickerIfNecessary()
+            viewModel.resetTemporaryState()
         }) { _ in
             // Pass the single source-of-truth binding to the detail view.
             FoodDetailView(foodItem: $viewModel.selectedFoodItem)
