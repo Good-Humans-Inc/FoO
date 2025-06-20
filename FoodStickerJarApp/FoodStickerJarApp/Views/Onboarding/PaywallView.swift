@@ -2,7 +2,8 @@ import SwiftUI
 import RevenueCat
 
 struct PaywallView: View {
-    @Environment(\.presentationMode) var presentationMode
+    @Binding var isPresented: Bool
+    
     @StateObject private var purchasesManager = PurchasesManager.shared
     
     @State private var showAlert = false
@@ -44,6 +45,8 @@ struct PaywallView: View {
                 }
                 footer
             }
+            
+            closeButton
         }
         .onAppear {
             purchasesManager.fetchOfferings()
@@ -70,7 +73,7 @@ struct PaywallView: View {
                     .font(.system(size: 28, weight: .heavy, design: .serif))
                     .lineSpacing(1)
             }
-            .padding(.top, 20)
+            .padding(.top, 40) // Increased padding to account for close button
             
             Text("Join thousands of users building healthy habits.\nYour subscription helps us create more fun & helpful features for you.")
                 .font(.system(size: 15, weight: .regular, design: .default))
@@ -154,6 +157,26 @@ struct PaywallView: View {
         .background(Color.themeBackground.edgesIgnoringSafeArea(.bottom))
     }
 
+    private var closeButton: some View {
+        VStack {
+            HStack {
+                Spacer()
+                Button(action: {
+                    isPresented = false
+                }) {
+                    Image(systemName: "xmark")
+                        .font(.system(size: 16, weight: .bold))
+                        .foregroundColor(.black.opacity(0.6))
+                        .padding(10)
+                        .background(Color.white.opacity(0.5))
+                        .clipShape(Circle())
+                }
+            }
+            .padding()
+            Spacer()
+        }
+    }
+    
     private func calculateSavings(yearly: Package?, monthly: Package?) -> String? {
         guard let yearly = yearly, let monthly = monthly else { return nil }
         let yearlyPrice = yearly.storeProduct.price
@@ -173,11 +196,13 @@ struct PaywallView: View {
         guard let package = selectedPackage else { return }
         Task {
             do {
-                try await purchasesManager.purchase(package: package)
-                presentationMode.wrappedValue.dismiss()
-            } catch let error as RevenueCat.ErrorCode {
-                alertMessage = error.localizedDescription
-                showAlert = true
+                let (_, customerInfo, userCancelled) = try await Purchases.shared.purchase(package: package)
+                if !userCancelled {
+                    // Update app state with new subscription status
+                    let isSubscribed = customerInfo.entitlements["premium"]?.isActive == true
+                    AppStateManager.shared.updateSubscriptionStatus(isSubscribed)
+                    isPresented = false
+                }
             } catch {
                 alertMessage = error.localizedDescription
                 showAlert = true
@@ -187,11 +212,19 @@ struct PaywallView: View {
     
     private func restorePurchases() {
         Task {
-            await purchasesManager.restorePurchases()
-            if purchasesManager.isSubscribed {
-                presentationMode.wrappedValue.dismiss()
-            } else {
-                alertMessage = "No purchases to restore."
+            do {
+                let customerInfo = try await Purchases.shared.restorePurchases()
+                let isSubscribed = customerInfo.entitlements["premium"]?.isActive == true
+                AppStateManager.shared.updateSubscriptionStatus(isSubscribed)
+                
+                if isSubscribed {
+                    isPresented = false
+                } else {
+                    alertMessage = "No purchases to restore."
+                    showAlert = true
+                }
+            } catch {
+                alertMessage = error.localizedDescription
                 showAlert = true
             }
         }
@@ -341,6 +374,6 @@ extension Color {
 
 struct PaywallView_Previews: PreviewProvider {
     static var previews: some View {
-        PaywallView()
+        PaywallView(isPresented: .constant(true))
     }
 } 

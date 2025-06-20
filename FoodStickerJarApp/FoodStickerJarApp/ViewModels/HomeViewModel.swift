@@ -17,8 +17,9 @@ class HomeViewModel: ObservableObject {
     // The user's profile data.
     @Published var userProfile: User?
     
-    // The currently selected item for viewing in the detail view.
-    @Published var selectedFoodItem: FoodItem?
+    // The detail view is now managed by the router.
+    // We hold a reference to it to communicate selections.
+    private let navigationRouter: NavigationRouter
     
     // Holds the newly created sticker to be shown in the detail sheet
     // before it's added to the main jar.
@@ -67,7 +68,9 @@ class HomeViewModel: ObservableObject {
 
     // MARK: - Initializer
     
-    init(authService: AuthenticationService) {
+    init(authService: AuthenticationService, navigationRouter: NavigationRouter) {
+        self.navigationRouter = navigationRouter
+        
         // Scene communication needs to be set up immediately.
         // The scene itself will be populated once its size is known from the view.
         setupJarSceneCommunication()
@@ -281,23 +284,9 @@ class HomeViewModel: ObservableObject {
     /// collection and the physics scene. This is called after the detail
     /// view for a new sticker is dismissed.
     func commitNewStickerIfNecessary() {
-        // Use the private, safe-guarded copy of the sticker.
-        guard let item = stickerToCommit else {
-            print("[HomeViewModel] commitNewStickerIfNecessary called, but no sticker to commit.")
-            // This can happen if the user dismisses the regular detail view, so we just ignore it.
-            return
-        }
-        
-        // Check if the critical data (the thumbnail URL) is ready.
-        if !item.thumbnailURLString.isEmpty {
-            // Data is ready. We can commit immediately.
-            print("[HomeViewModel] Sticker is ready. Committing immediately.")
+        if commitIsPending || newSticker != nil {
             commitStickerToJar()
-        } else {
-            // Data is not ready because the background task is still running.
-            // Set a flag indicating that as soon as the data is ready, a commit should happen.
-            print("[HomeViewModel] Sticker not ready. Deferring commit.")
-            self.commitIsPending = true
+            commitIsPending = false
         }
     }
     
@@ -306,7 +295,6 @@ class HomeViewModel: ObservableObject {
     func resetTemporaryState() {
         self.newSticker = nil
         self.stickerToCommit = nil
-        self.commitIsPending = false // Reset the flag
     }
     
     /// Submits user-provided feedback via the FeedbackService.
@@ -428,26 +416,21 @@ class HomeViewModel: ObservableObject {
     // MARK: - Private Helper Methods
     
     private func commitStickerToJar() {
-        guard let itemToAdd = stickerToCommit else {
-            print("[HomeViewModel] commitStickerToJar called, but no sticker to commit.")
+        guard let sticker = stickerToCommit else {
+            print("Warning: commitStickerToJar was called but stickerToCommit was nil.")
             return
         }
         
-        print("[HomeViewModel] Committing sticker ID \(itemToAdd.id) to the jar.")
-        // 1. Add the sticker to the main data array.
-        foodItems.append(itemToAdd)
+        print("[HomeViewModel] Committing sticker to jar: \(sticker.id)")
         
-        // 2. Add the sticker to the physics scene, triggering the animation.
-        jarScene.addSticker(foodItem: itemToAdd, isNew: true)
-        
-        // 3. Clear all temporary state to signify the commit is complete.
-        print("[HomeViewModel] Sticker committed. Clearing all temporary state.")
-        resetTemporaryState()
-
-        // 4. Check if the jar should be auto-archived.
-        Task {
-            await checkForAutoArchive(from: "stickerCommit")
+        if !foodItems.contains(where: { $0.id == sticker.id }) {
+            foodItems.append(sticker)
+            jarScene.addSticker(foodItem: sticker, isNew: true)
         }
+        
+        // Clear the temporary sticker state.
+        self.newSticker = nil
+        self.stickerToCommit = nil
     }
     
     private func checkForAutoArchive(from source: String) async {
@@ -482,8 +465,8 @@ class HomeViewModel: ObservableObject {
     
     /// Loads the user's stickers from Firestore and populates the physics scene.
     private func loadStickersFromFirestore() async {
-        guard let userId = userId else {
-            print("HomeViewModel: Cannot load stickers, user ID is missing.")
+        guard let userId = self.userId else {
+            print("HomeViewModel: Cannot load stickers, user ID is nil.")
             return
         }
         
@@ -504,12 +487,9 @@ class HomeViewModel: ObservableObject {
         jarScene.onStickerTapped
             .sink { [weak self] tappedItemID in
                 guard let self = self else { return }
-                
-                // Find the full FoodItem from our array.
                 if let tappedItem = self.foodItems.first(where: { $0.id == tappedItemID }) {
-                    print("HomeViewModel: Sticker with ID \(tappedItemID) was tapped.")
-                    // Set it as the selected item to trigger the detail view.
-                    self.selectedFoodItem = tappedItem
+                    // Tell the router to present the detail view.
+                    self.navigationRouter.selectedFoodItem = tappedItem
                 }
             }
             .store(in: &cancellables)
