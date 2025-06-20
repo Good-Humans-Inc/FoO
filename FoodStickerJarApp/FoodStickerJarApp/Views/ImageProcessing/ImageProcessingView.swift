@@ -7,6 +7,7 @@ import VisionKit
 struct ImageProcessingView: View {
     
     @EnvironmentObject var viewModel: HomeViewModel
+    @EnvironmentObject var appState: AppStateManager
     
     // State for the different stages of the process.
     private enum ProcessingState {
@@ -38,6 +39,11 @@ struct ImageProcessingView: View {
             // This view contains the VisionKit subject lifting logic.
             SubjectLiftContainerView(image: image, onComplete: { finalSticker, isSpecial in
                 
+                if !appState.isSubscribed && appState.freeCapturesLeft <= 0 {
+                    appState.showPaywall = true
+                    return
+                }
+
                 // Immediately prepare the UI for the animation by creating a
                 // temporary local FoodItem.
                 let stickerID = viewModel.prepareForAnimation(isSpecial: isSpecial)
@@ -46,6 +52,11 @@ struct ImageProcessingView: View {
                 // sees the effect without waiting for the network.
                 currentState = .animating(original: image, sticker: finalSticker)
                 
+                // Decrement free captures if not subscribed
+                if !appState.isSubscribed {
+                    appState.decrementFreeCaptures()
+                }
+
                 // Launch a detached background task to handle the slow work
                 // of saving the images and data to the network.
                 Task {

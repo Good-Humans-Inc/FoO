@@ -110,7 +110,9 @@ class FirestoreService {
             "age": age,
             "pronoun": pronoun,
             "goals": goals,
-            "onboardingCompleted": true
+            "onboardingCompleted": true,
+            "freeCapturesLeft": 5,
+            "hasPremium": false
         ], merge: true) // merge: true ensures we don't overwrite other fields like jarIDs.
         
         print("✅ FirestoreService: Successfully completed onboarding for user \(userID).")
@@ -311,6 +313,18 @@ class FirestoreService {
         }
         
         return foodItems
+    }
+
+    func decrementFreeCaptures(for userID: String) async {
+        let userDocumentRef = db.collection("users").document(userID)
+        do {
+            try await userDocumentRef.updateData([
+                "freeCapturesLeft": FieldValue.increment(Int64(-1))
+            ])
+            print("✅ FirestoreService: Decremented free captures for user \(userID).")
+        } catch {
+            print("❌ FirestoreService: Failed to decrement free captures for user \(userID): \(error)")
+        }
     }
 }
 

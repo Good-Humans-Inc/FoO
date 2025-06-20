@@ -3,6 +3,7 @@ import SwiftUI
 struct HomeView: View {
     // Access the shared ViewModel from the environment.
     @EnvironmentObject var viewModel: HomeViewModel
+    @EnvironmentObject var appState: AppStateManager
     
     // Manages the presentation of the image picker and cropper.
     @State private var showImageProcessingSheet = false
@@ -216,6 +217,7 @@ struct HomeView: View {
         }) {
             ImageProcessingView()
                 .environmentObject(viewModel)
+                .environmentObject(appState)
         }
         // A single, unified full-screen cover for presenting the detail view.
         .fullScreenCover(item: itemForCover, onDismiss: {

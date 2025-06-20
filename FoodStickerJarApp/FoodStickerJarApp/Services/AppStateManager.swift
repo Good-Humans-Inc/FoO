@@ -21,6 +21,9 @@ class AppStateManager: ObservableObject {
     @Published var isInitialized = false
 
     @Published var isOnboardingCompleted: Bool = false
+    @Published var isSubscribed: Bool = false
+    @Published var freeCapturesLeft: Int = 0
+    @Published var showPaywall: Bool = false
     
     private let onboardingCompletedKey = "isOnboardingCompleted"
     
@@ -39,16 +42,46 @@ class AppStateManager: ObservableObject {
         self.isOnboardingCompleted = true
     }
     
-    func setOnboardingStatus(isCompleted: Bool) {
+    func setUserData(onboardingCompleted: Bool, freeCaptures: Int, hasPremium: Bool) {
         if !forceShowOnboardingForTesting {
-            self.isOnboardingCompleted = isCompleted
-            UserDefaults.standard.set(isCompleted, forKey: onboardingCompletedKey)
+            self.isOnboardingCompleted = onboardingCompleted
+            UserDefaults.standard.set(onboardingCompleted, forKey: onboardingCompletedKey)
         }
+        self.freeCapturesLeft = freeCaptures
+        self.isSubscribed = hasPremium
         
         // Once we have set the status from the remote source (or ignored it for testing),
         // the app is considered initialized.
         if !self.isInitialized {
             self.isInitialized = true
+        }
+    }
+
+    func decrementFreeCaptures() {
+        if freeCapturesLeft > 0 {
+            freeCapturesLeft -= 1
+            
+            guard let userID = AuthenticationService.shared.user?.uid else { return }
+            Task {
+                await FirestoreService().decrementFreeCaptures(for: userID)
+            }
+        }
+    }
+
+    func checkSubscriptionStatus() {
+        Purchases.shared.getCustomerInfo { [weak self] (customerInfo, error) in
+            guard let self = self else { return }
+            
+            if let error = error {
+                print("Error fetching customer info: \(error.localizedDescription)")
+                return
+            }
+            
+            if customerInfo?.entitlements.all["premium"]?.isActive == true {
+                self.isSubscribed = true
+            } else {
+                self.isSubscribed = false
+            }
         }
     }
 } 

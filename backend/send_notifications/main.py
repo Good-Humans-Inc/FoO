@@ -3,12 +3,13 @@ from firebase_admin import firestore, messaging
 import functions_framework
 from datetime import datetime
 from zoneinfo import ZoneInfo, available_timezones
+from google.cloud.firestore_v1.base_query import FieldFilter
 
 # Initialize Firebase Admin SDK. This is done once per function instance.
 firebase_admin.initialize_app()
 db = firestore.client()
 
-TARGET_HOURS = [7, 11, 17, 18, 19, 20]  # 7am, 11am, 5pm
+TARGET_HOURS = [7, 11, 17, 18, 19, 20, 21, 22, 23]  # 7am, 11am, 5pm
 
 @functions_framework.http
 def send_daily_notification(request):
@@ -42,7 +43,7 @@ def send_daily_notification(request):
     tokens = []
     for i in range(0, len(target_timezones), 30):
         chunk = target_timezones[i:i + 30]
-        users_ref = db.collection('users').where('timezone', 'in', chunk)
+        users_ref = db.collection('users').where(filter=FieldFilter('timezone', 'in', chunk))
         docs = users_ref.stream()
         
         for doc in docs:

@@ -17,4 +17,8 @@ struct User: Codable, Identifiable {
     var goals: [String]?
     var onboardingCompleted: Bool?
     var timezone: String?
+
+    // MARK: - Monetization
+    var freeCapturesLeft: Int?
+    var hasPremium: Bool?
 } 
