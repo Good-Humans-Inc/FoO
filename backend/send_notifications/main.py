@@ -39,22 +39,44 @@ def send_daily_notification(request):
         print(f"--- [PROD_NOTIF] No timezones match the current UTC hour: {utc_now.hour}. No notifications will be sent.")
         return "No target timezones for this hour.", 200
 
-    print(f"--- [PROD_NOTIF] Found {len(target_timezones)} timezones matching target hours. Querying for users.")
+    print(f"--- [PROD_NOTIF] Found {len(target_timezones)} timezones matching target hours.")
+    # DEBUG: Print the FULL list of timezones to verify calculation
+    print(f"--- [PROD_NOTIF] Full list of target timezones: {target_timezones}")
 
     # 3. Fetch all users who are in one of the target timezones.
     tokens = []
+    found_users_in_target_zones = 0
+    users_with_tokens = 0
+
     for i in range(0, len(target_timezones), 30):
         chunk = target_timezones[i:i + 30]
+        print(f"--- [PROD_NOTIF] Querying for timezones in chunk {i//30 + 1}...")
         users_ref = db.collection('users').where(filter=FieldFilter('timezone', 'in', chunk))
         docs = users_ref.stream()
         
         for doc in docs:
+            found_users_in_target_zones += 1
             user_data = doc.to_dict()
-            if 'fcmToken' in user_data and user_data['fcmToken']:
-                tokens.append(user_data['fcmToken'])
+            user_id = doc.id
+            user_timezone = user_data.get('timezone', 'N/A')
+            has_token = 'fcmToken' in user_data and user_data['fcmToken']
+            
+            print(f"--- [PROD_NOTIF]   - User: {user_id}, DB Timezone: '{user_timezone}', Has Token: {has_token}")
+
+            if has_token:
+                token = user_data['fcmToken']
+                tokens.append(token)
+                users_with_tokens += 1
+                print(f"--- [PROD_NOTIF]     - Token Found, ending in ...{token[-10:]}. Added to send list.")
+    
+    # --- DEBUG SUMMARY ---
+    print("\n--- [PROD_NOTIF] --- QUERY SUMMARY ---")
+    print(f"--- [PROD_NOTIF] Total user documents returned by query: {found_users_in_target_zones}")
+    print(f"--- [PROD_NOTIF] Total users with a valid FCM token: {users_with_tokens}")
+    print("--- [PROD_NOTIF] -----------------------\n")
             
     if not tokens:
-        print("--- [PROD_NOTIF] No FCM tokens found for users in the target timezones. No notifications sent.")
+        print("--- [PROD_NOTIF] No valid FCM tokens found for users in the target timezones. No notifications sent.")
         return "No FCM tokens found for users in target timezones.", 200
 
     print(f"--- [PROD_NOTIF] Found {len(tokens)} tokens to send notifications to.")
