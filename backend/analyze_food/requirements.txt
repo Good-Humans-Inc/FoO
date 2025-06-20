@@ -1,7 +1,7 @@
 # Used by Google Cloud Functions
-functions-framework==3.*
+functions-framework==3.5.0
 
 # Google Cloud AI for Gemini
-# Pinning to a recent version to ensure `Schema` and other
-# advanced features are available.
-google-cloud-aiplatform>=1.51.0 
+# Pinning to a recent, stable version to ensure feature compatibility
+# and predictable deployments.
+google-cloud-aiplatform==1.56.0 

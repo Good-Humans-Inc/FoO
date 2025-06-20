@@ -1,70 +1,105 @@
 import SwiftUI
 
 struct FeedbackView: View {
-    // State to hold the text entered by the user.
-    @State private var feedbackMessage: String = ""
+    @Binding var feedbackText: String
+    var onSubmit: () -> Void
+
+    // --- Contact Info ---
+    // You can replace these with your actual links and email address.
+    private let instagramURL = URL(string: "https://www.instagram.com/xielr_l")!
+    private let tiktokURL = URL(string: "https://www.tiktok.com/@your_username_here")!
+    private let emailAddress = "contact@goodhumans.today"
     
-    // An instance of our feedback service to send the message.
-    private let feedbackService = FeedbackService()
-    
-    // A focus state to programmatically dismiss the keyboard.
-    @FocusState private var isTextFieldFocused: Bool
+    // State to provide feedback when email is copied
+    @State private var didCopyEmail = false
 
     var body: some View {
-        HStack(spacing: 12) {
-            // A text field styled to look like a modern chat input.
-            TextField("Confused? Tell me about it...", text: $feedbackMessage)
-                .textFieldStyle(.plain)
-                .padding(.horizontal, 16)
-                .padding(.vertical, 10)
-                .background(.ultraThinMaterial)
-                .clipShape(Capsule())
-                .focused($isTextFieldFocused)
+        VStack(spacing: 12) {
+            // Main input section
+            HStack(spacing: 12) {
+                TextField("Tell us anything!", text: $feedbackText)
+                    .textFieldStyle(.plain)
+                    .padding(.horizontal, 16)
+                    .padding(.vertical, 10)
+                    .background(Color.white.opacity(0.5))
+                    .clipShape(Capsule())
 
-            // The send button's color and disabled state changes based on input.
-            Button(action: {
-                handleSubmit()
-            }) {
-                Image(systemName: "arrow.up.circle.fill")
-                    .font(.system(size: 28, weight: .bold))
-                    .foregroundColor(feedbackMessage.isEmpty ? .gray : Color(red: 236/255, green: 138/255, blue: 83/255))
+                Button(action: onSubmit) {
+                    Image(systemName: "arrow.up.circle.fill")
+                        .font(.system(size: 28, weight: .bold))
+                        .foregroundColor(feedbackText.isEmpty ? .gray.opacity(0.5) : .themeAccent)
+                }
+                .disabled(feedbackText.isEmpty)
             }
-            .disabled(feedbackMessage.isEmpty)
+            
+            Group {
+                if didCopyEmail {
+                    Text("Copied email address (ﾉ^▽^)ﾉ")
+                        .font(.subheadline)
+                        .foregroundColor(.secondary)
+                        .transition(.opacity)
+                } else {
+                    // Social media and contact links
+                    HStack(spacing: 25) {
+                        Link(destination: instagramURL) {
+                            Image("instagramLogo")
+                                .resizable()
+                                .scaledToFit()
+                                .frame(width: 24, height: 24)
+                        }
+                        
+                        Link(destination: tiktokURL) {
+                            Image("tiktokLogo")
+                                .resizable()
+                                .scaledToFit()
+                                .frame(width: 24, height: 24)
+                        }
+                            
+                        Button(action: copyEmail) {
+                            Image(systemName: "envelope.fill")
+                                .font(.system(size: 22))
+                                .foregroundColor(.secondary)
+                        }
+                    }
+                    .transition(.opacity)
+                }
+            }
+            .padding(.top, 5)
         }
-        .padding(8)
+        .padding()
         .background(
             .ultraThinMaterial,
             in: RoundedRectangle(cornerRadius: 30, style: .continuous)
         )
         .shadow(color: .black.opacity(0.1), radius: 5, x: 0, y: 2)
-        .animation(.spring(response: 0.3, dampingFraction: 0.6), value: feedbackMessage.isEmpty)
+        .animation(.spring(response: 0.3, dampingFraction: 0.6), value: feedbackText.isEmpty)
+        .animation(.easeIn(duration: 0.2), value: didCopyEmail)
+        .transition(.opacity.combined(with: .move(edge: .trailing)))
     }
-
-    /// Handles the submission of the feedback.
-    private func handleSubmit() {
-        guard !feedbackMessage.isEmpty else { return }
-        feedbackService.submitFeedback(message: feedbackMessage)
+    
+    private func copyEmail() {
+        // Copy the email address to the system pasteboard.
+        UIPasteboard.general.string = emailAddress
         
-        // Clear the text field and dismiss the keyboard.
-        feedbackMessage = ""
-        isTextFieldFocused = false
+        // Trigger the visual feedback.
+        withAnimation {
+            didCopyEmail = true
+        }
+        
+        // Reset the feedback after 2 seconds.
+        DispatchQueue.main.asyncAfter(deadline: .now() + 2) {
+            withAnimation {
+                didCopyEmail = false
+            }
+        }
     }
 }
 
-#Preview {
-    // A more realistic preview showing the view at the bottom.
-    ZStack {
-        LinearGradient(
-            colors: [.gray.opacity(0.3), .gray.opacity(0.1)],
-            startPoint: .top,
-            endPoint: .bottom
-        )
-        
-        VStack {
-            Spacer()
-            FeedbackView()
-                .padding()
+struct FeedbackView_Previews: PreviewProvider {
+    static var previews: some View {
+        ZStack {
+            Color.themeBackground.ignoresSafeArea()
+            FeedbackView(feedbackText: .constant(""), onSubmit: {})
         }
     }
-    .ignoresSafeArea()
 } 

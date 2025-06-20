@@ -60,41 +60,20 @@ struct HomeView: View {
                         )
                         
                         if showFeedbackInput {
-                            // Custom Feedback Input Area
-                            HStack(spacing: 12) {
-                                TextField("Confused? Tell me about it...", text: $feedbackText)
-                                    .textFieldStyle(.plain)
-                                    .padding(.horizontal, 16)
-                                    .padding(.vertical, 10)
-                                    .background(.thinMaterial)
-                                    .clipShape(Capsule())
-
-                                Button(action: {
-                                    viewModel.submitFeedback(feedbackText)
-                                    withAnimation {
-                                        showFeedbackInput = false
-                                        feedbackText = ""
-                                    }
-                                }) {
-                                    Image(systemName: "arrow.up.circle.fill")
-                                        .font(.system(size: 28, weight: .bold))
-                                        .foregroundColor(feedbackText.isEmpty ? .gray : .themeAccent)
+                            FeedbackView(feedbackText: $feedbackText) {
+                                viewModel.submitFeedback(feedbackText)
+                                withAnimation {
+                                    showFeedbackInput = false
+                                    feedbackText = ""
                                 }
-                                .disabled(feedbackText.isEmpty)
                             }
-                            .padding(8)
-                            .background(
-                                .ultraThinMaterial,
-                                in: RoundedRectangle(cornerRadius: 30, style: .continuous)
-                            )
-                            .shadow(color: .black.opacity(0.1), radius: 5, x: 0, y: 2)
-                            .animation(.spring(response: 0.3, dampingFraction: 0.6), value: feedbackText.isEmpty)
-                            .transition(.opacity.combined(with: .move(edge: .trailing)))
                             .gesture(
                                 DragGesture()
                                     .onEnded { value in
-                                        // If user swipes from right to left, close the feedback box
-                                        if value.translation.width > 50 {
+                                        let swipeUp = value.translation.height < -50
+                                        let swipeRight = value.translation.width > 50
+                                        // If user swipes up or right, close the feedback box
+                                        if swipeUp || swipeRight {
                                             withAnimation {
                                                 showFeedbackInput = false
                                             }
@@ -136,6 +115,19 @@ struct HomeView: View {
                             .onChange(of: geo.size) { newSize in
                                 self.jarViewSize = newSize
                             }
+                    }
+                    .onTapGesture {
+                        if showFeedbackInput {
+                            withAnimation {
+                                showFeedbackInput = false
+                            }
+                        }
+                    }
+                }
+                .onChange(of: showFeedbackInput) { isShowing in
+                    if !isShowing {
+                        // Resign first responder to dismiss the keyboard
+                        UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
                     }
                 }
                 .onChange(of: viewModel.triggerSnapshot) { shouldSnapshot in
@@ -206,6 +198,7 @@ struct HomeView: View {
             }
             .navigationBarHidden(true)
             .frame(maxWidth: .infinity, maxHeight: .infinity)
+            .ignoresSafeArea(.keyboard, edges: .bottom)
         }
         .navigationViewStyle(.stack)
         // MARK: - Sheet Modifiers

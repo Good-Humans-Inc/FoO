@@ -1,6 +1,6 @@
 # Firebase
-firebase-functions
-firebase-admin
+firebase-functions==0.2.0
+firebase-admin==6.5.0
 
 # Google Cloud AI for Gemini
-google-cloud-aiplatform 
+google-cloud-aiplatform==1.56.0 
