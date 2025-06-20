@@ -96,6 +96,7 @@ def analyze_food(request):
     base_prompt = SPECIAL_PROMPT if is_special else STANDARD_PROMPT
     prompt = personalization_intro + base_prompt
     print(f"DEBUG: Using {'SPECIAL' if is_special else 'STANDARD'} prompt.")
+    print(f"DEBUG: using prompt: {prompt}")
 
     # Set a higher temperature for the special prompt to encourage more creative and varied responses.
     # A lower temperature for the standard prompt keeps the facts more consistent.
