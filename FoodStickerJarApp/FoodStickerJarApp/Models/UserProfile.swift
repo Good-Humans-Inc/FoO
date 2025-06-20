@@ -10,6 +10,9 @@ struct User: Codable, Identifiable {
     // The list of IDs for all jars archived by this user.
     let jarIDs: [String]
     
+    // The number of stickers created by this user.
+    var stickerCount: Int?
+    
     // MARK: - Onboarding Data
     var name: String?
     var age: Int?
@@ -17,8 +20,4 @@ struct User: Codable, Identifiable {
     var goals: [String]?
     var onboardingCompleted: Bool?
     var timezone: String?
-
-    // MARK: - Monetization
-    var freeCapturesLeft: Int?
-    var hasPremium: Bool?
 } 

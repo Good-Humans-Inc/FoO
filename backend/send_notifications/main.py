@@ -6,10 +6,12 @@ from zoneinfo import ZoneInfo, available_timezones
 from google.cloud.firestore_v1.base_query import FieldFilter
 
 # Initialize Firebase Admin SDK. This is done once per function instance.
-firebase_admin.initialize_app()
+# Explicitly set the project ID to avoid any ambiguity.
+options = {'projectId': 'foodjar-462805'}
+firebase_admin.initialize_app(options=options)
 db = firestore.client()
 
-TARGET_HOURS = [7, 11, 17, 18, 19, 20, 21, 22, 23]  # 7am, 11am, 5pm
+TARGET_HOURS = [7, 11, 13, 14, 15, 16,17, 18, 19, 20, 21, 22, 23]  # 7am, 11am, 5pm
 
 @functions_framework.http
 def send_daily_notification(request):

@@ -71,6 +71,10 @@ class FirestoreService {
         let stickerDocument = db.collection("users").document(userID).collection("stickers").document(stickerID.uuidString)
         try stickerDocument.setData(from: foodItem)
         
+        // Atomically increment the user's sticker count.
+        let userDocument = db.collection("users").document(userID)
+        try await userDocument.setData(["stickerCount": FieldValue.increment(Int64(1))], merge: true)
+        
         print("✅ FirestoreService: Successfully created and saved sticker metadata for \(stickerID.uuidString).")
         
         return foodItem
@@ -110,9 +114,7 @@ class FirestoreService {
             "age": age,
             "pronoun": pronoun,
             "goals": goals,
-            "onboardingCompleted": true,
-            "freeCapturesLeft": 5,
-            "hasPremium": false
+            "onboardingCompleted": true
         ], merge: true) // merge: true ensures we don't overwrite other fields like jarIDs.
         
         print("✅ FirestoreService: Successfully completed onboarding for user \(userID).")
@@ -242,6 +244,14 @@ class FirestoreService {
         return newJarItem
     }
     
+    /// Fetches a single user profile document.
+    /// - Parameter userID: The ID of the user to fetch.
+    /// - Returns: The `User` object.
+    func fetchUser(for userID: String) async throws -> User {
+        let userDocument = db.collection("users").document(userID)
+        return try await userDocument.getDocument(as: User.self)
+    }
+    
     /// Fetches all jars belonging to a specific user.
     /// - Parameter userID: The ID of the user whose jars to fetch.
     /// - Returns: An array of `JarItem` objects.
@@ -313,18 +323,6 @@ class FirestoreService {
         }
         
         return foodItems
-    }
-
-    func decrementFreeCaptures(for userID: String) async {
-        let userDocumentRef = db.collection("users").document(userID)
-        do {
-            try await userDocumentRef.updateData([
-                "freeCapturesLeft": FieldValue.increment(Int64(-1))
-            ])
-            print("✅ FirestoreService: Decremented free captures for user \(userID).")
-        } catch {
-            print("❌ FirestoreService: Failed to decrement free captures for user \(userID): \(error)")
-        }
     }
 }
 

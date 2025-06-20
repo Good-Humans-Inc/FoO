@@ -7,6 +7,7 @@ struct HomeView: View {
     
     // Manages the presentation of the image picker and cropper.
     @State private var showImageProcessingSheet = false
+    @State private var showPaywall = false
 
     // State for the new UI
     @State private var showFeedbackInput = false
@@ -160,7 +161,17 @@ struct HomeView: View {
                     HStack {
                         Spacer()
                         Button(action: {
-                            showImageProcessingSheet = true
+                            // Paywall Logic:
+                            // 1. If subscribed, always allow.
+                            // 2. If not subscribed, check sticker count.
+                            // 3. Allow if sticker count is less than 5.
+                            // 4. Otherwise, show paywall.
+                            let stickerCount = viewModel.userProfile?.stickerCount ?? 0
+                            if appState.isSubscribed || stickerCount < 5 {
+                                showImageProcessingSheet = true
+                            } else {
+                                showPaywall = true
+                            }
                         }) {
                             Image("cameraIcon")
                                 .resizable()
@@ -217,7 +228,9 @@ struct HomeView: View {
         }) {
             ImageProcessingView()
                 .environmentObject(viewModel)
-                .environmentObject(appState)
+        }
+        .sheet(isPresented: $showPaywall) {
+            PaywallView()
         }
         // A single, unified full-screen cover for presenting the detail view.
         .fullScreenCover(item: itemForCover, onDismiss: {

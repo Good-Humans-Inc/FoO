@@ -14,6 +14,9 @@ class HomeViewModel: ObservableObject {
     // The master list of all food items.
     @Published var foodItems: [FoodItem] = []
     
+    // The user's profile data.
+    @Published var userProfile: User?
+    
     // The currently selected item for viewing in the detail view.
     @Published var selectedFoodItem: FoodItem?
     
@@ -86,6 +89,10 @@ class HomeViewModel: ObservableObject {
                     Task {
                         await self.loadStickersFromFirestore()
                     }
+                }
+                
+                Task {
+                    await self.loadUserProfile()
                 }
             }
             .store(in: &cancellables)
@@ -169,7 +176,7 @@ class HomeViewModel: ObservableObject {
         if isSpecial {
             SoundManager.shared.playSound(named: "specialGen")
         } else {
-            SoundManager.shared.playSound(named: "normalGen")
+            SoundManager.shared.playSound(named: "normyGen")
         }
         
         guard let userId = self.userId else {
@@ -243,6 +250,12 @@ class HomeViewModel: ObservableObject {
                 // so the fully-analyzed version is what gets dropped in the jar.
                 if self.stickerToCommit?.id == finalItem.id {
                     self.stickerToCommit = finalItem
+                }
+                
+                // After successfully creating a sticker, reload the user profile
+                // to get the updated sticker count.
+                Task {
+                    await self.loadUserProfile()
                 }
                 
                 // --- FIX: Update the item in the main array as well ---
@@ -489,11 +502,34 @@ class HomeViewModel: ObservableObject {
     /// Listens for tap events broadcasted from the JarScene.
     private func setupJarSceneCommunication() {
         jarScene.onStickerTapped
-            .receive(on: DispatchQueue.main) // Ensure we switch to the main thread
             .sink { [weak self] tappedItemID in
-                // Find the food item that corresponds to the tapped sticker's ID.
-                self?.selectedFoodItem = self?.foodItems.first(where: { $0.id == tappedItemID })
+                guard let self = self else { return }
+                
+                // Find the full FoodItem from our array.
+                if let tappedItem = self.foodItems.first(where: { $0.id == tappedItemID }) {
+                    print("HomeViewModel: Sticker with ID \(tappedItemID) was tapped.")
+                    // Set it as the selected item to trigger the detail view.
+                    self.selectedFoodItem = tappedItem
+                }
             }
             .store(in: &cancellables)
+    }
+    
+    /// Loads the current user's profile from Firestore.
+    func loadUserProfile() async {
+        guard let userId = self.userId else {
+            print("HomeViewModel: Cannot load user profile, user ID is nil.")
+            return
+        }
+        
+        do {
+            let user = try await firestoreService.fetchUser(for: userId)
+            await MainActor.run {
+                self.userProfile = user
+                print("✅ HomeViewModel: Successfully loaded user profile. Sticker count: \(user.stickerCount ?? 0)")
+            }
+        } catch {
+            print("❌ HomeViewModel: Failed to load user profile: \(error.localizedDescription)")
+        }
     }
 }

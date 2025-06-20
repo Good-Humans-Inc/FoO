@@ -37,7 +37,7 @@ class AuthenticationService: ObservableObject {
             if let user = user {
                 // If we have a user, sync their FCM token and check onboarding.
                 self?.syncFCMToken(for: user.uid)
-                self?.syncUserSession(for: user.uid)
+                self?.checkOnboardingStatus(for: user.uid)
             } else {
                 // If there's no user, it means we need to sign in anonymously.
                 self?.signInAnonymously()
@@ -61,7 +61,7 @@ class AuthenticationService: ObservableObject {
         }
     }
     
-    private func syncUserSession(for userID: String) {
+    private func checkOnboardingStatus(for userID: String) {
         Task {
             do {
                 // First, ensure a user document exists in the database.
@@ -71,26 +71,16 @@ class AuthenticationService: ObservableObject {
                 // Now, fetch the user profile. This should succeed now.
                 let userProfile = try await firestoreService.fetchUser(with: userID)
                 let isOnboardingCompleted = userProfile.onboardingCompleted ?? false
-                let freeCapturesLeft = userProfile.freeCapturesLeft ?? 0
-                let hasPremium = userProfile.hasPremium ?? false
                 
                 // Update the app state and save the result to UserDefaults.
                 await MainActor.run {
-                    self.appState.setUserData(
-                        onboardingCompleted: isOnboardingCompleted,
-                        freeCaptures: freeCapturesLeft,
-                        hasPremium: hasPremium
-                    )
+                    self.appState.setOnboardingStatus(isCompleted: isOnboardingCompleted)
                 }
             } catch {
                 // If the user document doesn't exist or another error occurs,
                 // we assume they haven't completed onboarding.
                 await MainActor.run {
-                    self.appState.setUserData(
-                        onboardingCompleted: false,
-                        freeCaptures: 0,
-                        hasPremium: false
-                    )
+                    self.appState.setOnboardingStatus(isCompleted: false)
                 }
                 print("Could not fetch user profile to check onboarding status: \(error)")
             }
