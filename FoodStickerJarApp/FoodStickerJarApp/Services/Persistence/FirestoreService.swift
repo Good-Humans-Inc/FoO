@@ -63,7 +63,6 @@ class FirestoreService {
             isFood: nil,
             name: nil,
             funFact: nil,
-            nutrition: nil,
             isSpecial: isSpecial
         )
         
@@ -89,7 +88,6 @@ class FirestoreService {
             "isFood": sticker.isFood as Any,
             "name": sticker.name as Any,
             "funFact": sticker.funFact as Any,
-            "nutrition": sticker.nutrition as Any
         ], merge: true)
         
         print("✅ FirestoreService: Successfully updated sticker \(sticker.id.uuidString) with analysis data.")

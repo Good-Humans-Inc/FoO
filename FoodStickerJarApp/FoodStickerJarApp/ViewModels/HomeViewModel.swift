@@ -28,6 +28,7 @@ class HomeViewModel: ObservableObject {
     // State properties for managing the sticker creation UI flow.
     @Published var isSavingSticker = false
     @Published var stickerCreationError: String?
+    @Published var jarArchivingError: String?
     @Published var showArchiveInProgress = false
     @Published var triggerSnapshot = false
     @Published var newlyGeneratedReport: String?
@@ -141,9 +142,8 @@ class HomeViewModel: ObservableObject {
             thumbnailURLString: "", // Will be populated by the background task
             originalImageURLString: nil,
             isFood: nil,
-            name: "Casting spell......", // Placeholder name
+            name: "Casting spell...", // Placeholder name
             funFact: nil,
-            nutrition: nil,
             isSpecial: isSpecial // Set immediately for the UI
         )
         
@@ -214,7 +214,6 @@ class HomeViewModel: ObservableObject {
                 finalItem.isFood = foodInfo.isFood
                 finalItem.name = foodInfo.name
                 finalItem.funFact = foodInfo.funFact
-                finalItem.nutrition = foodInfo.nutrition
             case .failure(let error):
                 finalItem.isFood = false // If analysis fails, assume it's not food.
                 finalItem.name = "Analysis Failed"
@@ -252,6 +251,14 @@ class HomeViewModel: ObservableObject {
                 if let index = self.foodItems.firstIndex(where: { $0.id == finalItem.id }) {
                     print("[HomeViewModel] Analysis for committed sticker \(finalItem.id) complete. Updating master list.")
                     self.foodItems[index] = finalItem
+                }
+                
+                // If the user is currently viewing the detail of the sticker that just
+                // finished analyzing, we must also update the selectedFoodItem directly.
+                // This ensures the detail view, which is bound to selectedFoodItem, refreshes immediately.
+                if self.selectedFoodItem?.id == finalItem.id {
+                    print("[HomeViewModel] Refreshing currently visible detail view.")
+                    self.selectedFoodItem = finalItem
                 }
             }
 
@@ -326,7 +333,7 @@ class HomeViewModel: ObservableObject {
     /// - Parameter image: The `UIImage` snapshot of the jar view.
     func archiveJar(with image: UIImage) async {
         guard let userId = self.userId, !foodItems.isEmpty else {
-            stickerCreationError = "Could not archive jar: user not logged in or no items in the jar."
+            jarArchivingError = "Could not archive jar: user not logged in or no items in the jar."
             showArchiveInProgress = false
             return
         }
@@ -364,7 +371,7 @@ class HomeViewModel: ObservableObject {
 
         } catch {
             print("[HomeViewModel] Error archiving jar: \(error.localizedDescription)")
-            stickerCreationError = "Failed to archive the jar. Please try again. Error: \(error.localizedDescription)"
+            jarArchivingError = "Failed to archive the jar. Please try again. Error: \(error.localizedDescription)"
             showArchiveInProgress = false
         }
     }

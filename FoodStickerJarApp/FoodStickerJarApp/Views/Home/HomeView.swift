@@ -197,7 +197,7 @@ struct HomeView: View {
                         .overlay {
                             VStack {
                                 ProgressView()
-                                Text("( ˘▽˘)っ Jas'ing it up...")
+                                Text("( ˘▽˘)っ Your jar is full! Jas'ing it up...")
                                     .font(.title2)
                                     .foregroundColor(.white)
                             }
@@ -243,6 +243,12 @@ struct HomeView: View {
             Button("OK") { viewModel.stickerCreationError = nil }
         } message: {
             Text(viewModel.stickerCreationError ?? "An unknown error occurred. Please check your internet connection and try again.")
+        }
+        // An alert to show if the archiving process fails.
+        .alert("Failed to Archive Jar", isPresented: .constant(viewModel.jarArchivingError != nil)) {
+            Button("OK") { viewModel.jarArchivingError = nil }
+        } message: {
+            Text(viewModel.jarArchivingError ?? "An unknown error occurred. Please try again.")
         }
     }
 }

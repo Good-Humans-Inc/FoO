@@ -25,28 +25,29 @@ def generate_report(req: https_fn.Request) -> https_fn.Response:
         )
         
     try:
-        # 2. Extract data from the request
-        food_items = req.data.get("foodItems")
-        if not food_items:
+        # 2. Extract data from the request. The payload should be a list of strings.
+        food_titles = req.data
+        if not isinstance(food_titles, list):
             raise https_fn.HttpsError(
                 code=https_fn.FunctionsErrorCode.INVALID_ARGUMENT,
-                message="Missing 'foodItems' in request payload.",
+                message="Payload must be a list of food name strings.",
+            )
+        if not food_titles:
+            # This case is handled by the client, but it's good practice to have a safeguard.
+            raise https_fn.HttpsError(
+                code=https_fn.FunctionsErrorCode.INVALID_ARGUMENT,
+                message="Food name list cannot be empty.",
             )
 
         # 3. Initialize the Vertex AI client
         vertexai.init(project="foodjar-462805", location="us-central1")
-        model = GenerativeModel(model_name="gemini-2.0-flash")
+        model = GenerativeModel(model_name="gemini-2.0-flash-001")
 
         # 4. Construct the prompt for Gemini
-        food_titles = [item.get("name", "Unknown Food") for item in food_items]
-        nutrition_details = [item.get("nutrition", "") for item in food_items]
-        
         prompt = f"""
         You are a friendly, encouraging nutritionist. Based on the following list of foods a user has consumed this week, please provide a brief, positive, and insightful weekly report.
 
         The user ate: {', '.join(food_titles)}.
-
-        Here are the nutritional details for some of the items: {'; '.join(nutrition_details)}
 
         Please structure the report with the following sections, using markdown for formatting:
 
