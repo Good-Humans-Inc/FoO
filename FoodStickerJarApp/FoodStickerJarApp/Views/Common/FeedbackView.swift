@@ -7,8 +7,8 @@ struct FeedbackView: View {
 
     // --- Contact Info ---
     // You can replace these with your actual links and email address.
-    private let instagramURL = URL(string: "https://www.instagram.com/xielr_l")!
-    private let tiktokURL = URL(string: "https://www.tiktok.com/@your_username_here")!
+    private let instagramURL = URL(string: "https://www.instagram.com/jasthissummer/ ")!
+    private let tiktokURL = URL(string: "https://www.tiktok.com/@jasthissummer")!
     private let emailAddress = "contact@goodhumans.today"
     
     // State to provide feedback when email is copied

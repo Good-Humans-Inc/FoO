@@ -2,6 +2,17 @@ import SwiftUI
 import Combine
 import UserNotifications
 
+struct ErrorAlert: Identifiable {
+    let id = UUID()
+    let title: String
+    let message: String
+}
+
+struct ReportWrapper: Identifiable {
+    let id = UUID()
+    let report: String
+}
+
 // This class manages the state and logic for the HomeView.
 // @MainActor ensures that any changes to its @Published properties
 // happen on the main thread, which is required for UI updates.
@@ -35,11 +46,17 @@ class HomeViewModel: ObservableObject {
     
     // State properties for managing the sticker creation UI flow.
     @Published var isSavingSticker = false
-    @Published var stickerCreationError: String?
-    @Published var jarArchivingError: String?
     @Published var showArchiveInProgress = false
-    @Published var triggerSnapshot = false
-    @Published var newlyGeneratedReport: String?
+    
+    // State properties for presenting alerts and sheets.
+    // Using Identifiable wrappers is the modern, reliable way to trigger views.
+    @Published var errorAlert: ErrorAlert?
+    @Published var newlyGeneratedReportWrapper: ReportWrapper?
+    
+    // A reference to the view that can be snapshotted.
+    // This is a workaround to avoid SwiftUI's view-based snapshotting limitations
+    // when the trigger comes from a non-view event (like a long press in SpriteKit).
+    var jarViewForSnapshotting: JarContainerView?
     
     // A flag to handle the race condition where the sheet is dismissed before
     // the sticker's network operations are complete.
@@ -295,7 +312,7 @@ class HomeViewModel: ObservableObject {
 
         } catch {
             await MainActor.run {
-                stickerCreationError = "Failed to create sticker. Error: \(error.localizedDescription)"
+                errorAlert = ErrorAlert(title: "Sticker Creation Failed", message: "Failed to create sticker. Error: \(error.localizedDescription)")
                 // Clean up the temporary state so the user isn't stuck.
                 resetTemporaryState()
             }
@@ -353,8 +370,16 @@ class HomeViewModel: ObservableObject {
             return
         }
         
+        guard let viewToSnapshot = jarViewForSnapshotting, let image = viewToSnapshot.snapshot()?.croppedToOpaque() else {
+            errorAlert = ErrorAlert(title: "Archive Failed", message: "Could not capture a snapshot of the jar. Please try again.")
+            return
+        }
+        
         showArchiveInProgress = true
-        triggerSnapshot = true
+        
+        Task {
+            await archiveJar(with: image)
+        }
     }
     
     /// The main function for creating a new jar from the existing stickers.
@@ -362,7 +387,7 @@ class HomeViewModel: ObservableObject {
     /// - Parameter image: The `UIImage` snapshot of the jar view.
     func archiveJar(with image: UIImage) async {
         guard let userId = self.userId, !foodItems.isEmpty else {
-            jarArchivingError = "Could not archive jar: user not logged in or no items in the jar."
+            errorAlert = ErrorAlert(title: "Archive Failed", message: "Could not archive jar: user not logged in or no items in the jar.")
             showArchiveInProgress = false
             return
         }
@@ -393,14 +418,14 @@ class HomeViewModel: ObservableObject {
             print("[HomeViewModel] Jar \(archivedJar.id ?? "N/A") successfully created in Firestore.")
             
             // 4. Update UI state on the main thread.
-            newlyGeneratedReport = report
+            self.newlyGeneratedReportWrapper = ReportWrapper(report: report)
             
             // 5. Update the last archive date
             UserDefaults.standard.set(Date(), forKey: "lastArchiveDate")
 
         } catch {
             print("[HomeViewModel] Error archiving jar: \(error.localizedDescription)")
-            jarArchivingError = "Failed to archive the jar. Please try again. Error: \(error.localizedDescription)"
+            errorAlert = ErrorAlert(title: "Archive Failed", message: "Failed to archive the jar. Please try again. Error: \(error.localizedDescription)")
             showArchiveInProgress = false
         }
     }
@@ -461,6 +486,11 @@ class HomeViewModel: ObservableObject {
         if !foodItems.contains(where: { $0.id == sticker.id }) {
             foodItems.append(sticker)
             jarScene.addSticker(foodItem: sticker, image: stickerImageToCommit, isNew: true)
+            
+            // Check for auto-archive in case this sticker filled the jar.
+            Task {
+                await self.checkForAutoArchive(from: "newStickerCommit")
+            }
         }
         
         // DO NOT clean up state here. The calling view is responsible for this
@@ -471,6 +501,7 @@ class HomeViewModel: ObservableObject {
         print("[HomeViewModel] Checking for auto-archive, triggered by: \(source).")
         
         let stickerCount = foodItems.count
+        print("*******[HomeViewModel] Sticker count: \(stickerCount)")
         let isJarFull = stickerCount > 21
         
         // Weekly Check Logic
@@ -510,6 +541,10 @@ class HomeViewModel: ObservableObject {
             self.foodItems = loadedItems
             print("HomeViewModel: Successfully loaded \(loadedItems.count) stickers. Populating scene.")
             jarScene.populateJar(with: self.foodItems)
+            
+            // Now that stickers are loaded, check if an archive is needed.
+            // This fixes the race condition on startup where the check ran before stickers were loaded.
+            await checkForAutoArchive(from: "postStickerLoad")
         } catch {
             print("HomeViewModel: An error occurred while loading stickers from Firestore: \(error.localizedDescription)")
             // Optionally, handle the error further (e.g., show an alert to the user).
@@ -519,12 +554,21 @@ class HomeViewModel: ObservableObject {
     /// Listens for tap events broadcasted from the JarScene.
     private func setupJarSceneCommunication() {
         jarScene.onStickerTapped
+            .receive(on: DispatchQueue.main)
             .sink { [weak self] tappedItemID in
                 guard let self = self else { return }
                 if let tappedItem = self.foodItems.first(where: { $0.id == tappedItemID }) {
                     // Tell the router to present the detail view.
                     self.navigationRouter.selectedFoodItem = tappedItem
                 }
+            }
+            .store(in: &cancellables)
+            
+        jarScene.onStickerLongPressed
+            .receive(on: DispatchQueue.main)
+            .sink { [weak self] in
+                print("[HomeViewModel] Long press detected, initiating manual archive.")
+                self?.initiateArchiving()
             }
             .store(in: &cancellables)
     }

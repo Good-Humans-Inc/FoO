@@ -39,6 +39,10 @@ struct HomeView: View {
                         ZStack {
                             JarContainerView(jarScene: viewModel.jarScene, size: geo.size)
                                 .disabled(showFeedbackInput)
+                                .onAppear {
+                                    // Assign the view to the view model for snapshotting
+                                    viewModel.jarViewForSnapshotting = JarContainerView(jarScene: viewModel.jarScene, size: geo.size)
+                                }
                         }
                         .frame(width: geo.size.width, height: geo.size.height)
                         .offset(y: -40)
@@ -52,20 +56,6 @@ struct HomeView: View {
                         }
                     }
                 }
-                .onChange(of: viewModel.triggerSnapshot) { shouldSnapshot in
-                    if shouldSnapshot {
-                        // Snapshot logic
-                        let snapshotView = JarContainerView(jarScene: viewModel.jarScene, size: jarViewSize)
-                            .frame(width: jarViewSize.width, height: jarViewSize.height)
-                            .offset(y: -40)
-                        if let image = snapshotView.snapshot()?.croppedToOpaque() {
-                            Task {
-                                await viewModel.archiveJar(with: image)
-                            }
-                        }
-                        viewModel.triggerSnapshot = false
-                    }
-                }
                 
                 // Floating Camera Button
                 VStack {
@@ -74,7 +64,7 @@ struct HomeView: View {
                         Spacer()
                         Button(action: {
                             let stickerCount = viewModel.userProfile?.stickerCount ?? 0
-                            if appState.isSubscribed || stickerCount < 50 {
+                            if appState.isSubscribed || stickerCount < 5 {
                                 showImageProcessingSheet = true
                             } else {
                                 showPaywallCover = true
@@ -121,24 +111,18 @@ struct HomeView: View {
         .fullScreenCover(isPresented: $showPaywallCover) {
             PaywallView(isPresented: $showPaywallCover)
         }
-        .fullScreenCover(isPresented: .constant(viewModel.newlyGeneratedReport != nil)) {
-            if let report = viewModel.newlyGeneratedReport {
-                ReportParchmentView(reportText: report) {
-                    viewModel.newlyGeneratedReport = nil
-                    viewModel.finalizeArchiving(clearLocalStickers: true)
-                }
+        .fullScreenCover(item: $viewModel.newlyGeneratedReportWrapper) { wrapper in
+            ReportParchmentView(reportText: wrapper.report) {
+                viewModel.newlyGeneratedReportWrapper = nil
+                viewModel.finalizeArchiving(clearLocalStickers: true)
             }
         }
-        .alert("Failed to Save Sticker", isPresented: .constant(viewModel.stickerCreationError != nil)) {
-            Button("OK") { viewModel.stickerCreationError = nil }
-        } message: {
-            Text(viewModel.stickerCreationError ?? "An unknown error occurred.")
-        }
-        // An alert to show if the archiving process fails.
-        .alert("Failed to Archive Jar", isPresented: .constant(viewModel.jarArchivingError != nil)) {
-            Button("OK") { viewModel.jarArchivingError = nil }
-        } message: {
-            Text(viewModel.jarArchivingError ?? "An unknown error occurred. Please try again.")
+        .alert(item: $viewModel.errorAlert) { errorAlert in
+            Alert(
+                title: Text(errorAlert.title),
+                message: Text(errorAlert.message),
+                dismissButton: .default(Text("OK"))
+            )
         }
     }
 }

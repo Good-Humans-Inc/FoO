@@ -12,6 +12,8 @@ class JarScene: SKScene, SKPhysicsContactDelegate {
     // A Combine publisher that will send the ID of a tapped sticker.
     // The HomeViewModel will subscribe to this.
     let onStickerTapped = PassthroughSubject<UUID, Never>()
+    let onStickerLongPressed = PassthroughSubject<Void, Never>()
+    
     var foodItemsById: [UUID: FoodItem] = [:]
     
     // A hard limit on the speed of any sticker to prevent tunneling and instability.
@@ -21,6 +23,9 @@ class JarScene: SKScene, SKPhysicsContactDelegate {
     private var draggedNode: SKNode?
     private var touchStartPos: CGPoint?
     private var nodeStartPos: CGPoint?
+    
+    // Properties for long press
+    private var longPressTimer: Timer?
     
     // Constants for physics categories to identify nodes.
     private struct PhysicsCategory {
@@ -61,10 +66,20 @@ class JarScene: SKScene, SKPhysicsContactDelegate {
             nodeStartPos = node.position
             // Temporarily disable physics simulation for the dragged node.
             node.physicsBody?.isDynamic = false
+            
+            // Start a timer for the long press action.
+            longPressTimer = Timer.scheduledTimer(withTimeInterval: 5.0, repeats: false) { [weak self] _ in
+                print("[JarScene] Long press detected!")
+                self?.onStickerLongPressed.send(())
+                self?.cleanupDrag() // Clean up to prevent dragging after archiving starts
+            }
         }
     }
     
     override func touchesMoved(_ touches: Set<UITouch>, with event: UIEvent?) {
+        // Invalidate the timer if the user moves their finger, cancelling the long press.
+        longPressTimer?.invalidate()
+        
         guard let touch = touches.first, let draggedNode = self.draggedNode, let touchStartPos = self.touchStartPos, let nodeStartPos = self.nodeStartPos else { return }
         
         // Calculate the new position based on the drag distance.
@@ -75,6 +90,9 @@ class JarScene: SKScene, SKPhysicsContactDelegate {
     }
     
     override func touchesEnded(_ touches: Set<UITouch>, with event: UIEvent?) {
+        // Invalidate the timer when the touch ends.
+        longPressTimer?.invalidate()
+        
         guard let touch = touches.first, let draggedNode = self.draggedNode, let touchStartPos = self.touchStartPos else {
             // If nothing was being dragged, do nothing.
             cleanupDrag()
@@ -105,6 +123,8 @@ class JarScene: SKScene, SKPhysicsContactDelegate {
     }
     
     override func touchesCancelled(_ touches: Set<UITouch>, with event: UIEvent?) {
+        // Invalidate the timer if the touch is cancelled.
+        longPressTimer?.invalidate()
         cleanupDrag()
     }
     
