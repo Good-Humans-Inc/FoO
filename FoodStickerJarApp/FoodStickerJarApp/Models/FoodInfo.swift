@@ -5,13 +5,11 @@ struct FoodInfo: Codable, Hashable {
     let isFood: Bool
     let name: String
     let funFact: String
-    let nutrition: String
     
     // Maps the Swift property names to the JSON keys from the backend.
     enum CodingKeys: String, CodingKey {
         case isFood = "is_food"
         case name
-        case funFact = "description"
-        case nutrition
+        case funFact = "fun_fact"
     }
 } 

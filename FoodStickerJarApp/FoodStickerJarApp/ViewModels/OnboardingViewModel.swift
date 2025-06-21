@@ -9,6 +9,7 @@ class OnboardingViewModel: ObservableObject {
     @Published var goals: [String] = []
     
     private let firestoreService = FirestoreService()
+    private let userProfileService = UserProfileService()
     
     func completeOnboarding() async throws {
         // Ensure we have a currently authenticated user.
@@ -24,5 +25,9 @@ class OnboardingViewModel: ObservableObject {
             pronoun: pronoun,
             goals: goals
         )
+        
+        // After successfully saving to Firestore, also save the profile locally.
+        let localProfile = UserProfile(name: name, age: age, pronoun: pronoun, goals: goals)
+        userProfileService.saveProfile(localProfile)
     }
 } 

@@ -11,10 +11,13 @@ struct FoodDetailView: View {
     var stickerImage: UIImage?
     // The namespace for the hero animation. Made optional for reuse.
     var namespace: Namespace.ID?
+    // Controls whether the fun fact typewriter animation should play.
+    var isNewlyCreated: Bool = false
     
     @Environment(\.dismiss) var dismiss
     
     @State private var showContent = false
+    @State private var animatedFunFact: String = "" // State for the typewriter animation
     
     // A static, efficient array of messages for unidentifiable items.
     private static let unidentifiableMessages = [
@@ -24,14 +27,10 @@ struct FoodDetailView: View {
         "It's a mystery.",
         "Calories: undefined. Courage: required.",
         "Chef, we have a situation.",
-        "My algorithm is confused. And a little scared.",
         "On a scale of 1 to food, this is a 0.",
         "Could be delicious...if you're an alien.",
         "Hopefully you have not ingested this.",
-        "Just to remind you this is your food jar, not your poison control center.",
         "Blink twice if you need help.",
-        "For your safety, and mine, let's not.",
-        "Debatable food choice.",
         "Let's call this one \"Abstract Cuisine\".",
         "Is it cake?",
         "The plot thickens...",
@@ -109,7 +108,7 @@ struct FoodDetailView: View {
                                         .font(.system(size: 32, weight: .bold, design: .serif))
                                 } else {
                                     // Show a loading/analyzing state
-                                    Text("Casting spell......")
+                                    Text("Casting spell...")
                                         .font(.system(size: 24, weight: .semibold, design: .serif))
                                 }
                             }
@@ -119,28 +118,45 @@ struct FoodDetailView: View {
                             Divider()
                             
                             // Details
-                            if foodItem.isFood == true {
-                                // Case: It's a food item. Display fun fact/story in a unified format.
-                                if let funFact = foodItem.funFact, !funFact.isEmpty {
-                                    Text(funFact)
-                                        .font(.custom("Georgia", size: 17))
-                                        .foregroundColor(.secondary)
-                                        .multilineTextAlignment(.center)
-                                        .padding(.top)
-                                } else {
-                                    // This can happen if analysis is still processing for a food item.
-                                    ProgressView()
-                                        .padding(.top)
-                                }
-                            } else if foodItem.isFood == false {
-                                // Case: Not a food item (or unidentifiable).
-                                Text(randomNotFoodMessage)
-                                    .font(.custom("Georgia", size:17))
+                            // Prioritize showing the fun fact if it exists and is not "N/A".
+                            if let funFact = foodItem.funFact, !funFact.isEmpty, funFact != "???", funFact != "N/A" {
+                                Text(animatedFunFact.isEmpty ? " " : animatedFunFact) // Use a space to reserve height, preventing layout jumps
+                                    .font(.custom("Georgia", size: 17))
                                     .foregroundColor(.secondary)
-                                    .multilineTextAlignment(.center)
+                                    .multilineTextAlignment(.leading)
+                                    .frame(maxWidth: .infinity, alignment: .leading)
                                     .padding(.top)
-                            } else {
-                                // Case: Still loading (isFood is nil).
+                                    .task(id: showContent) {
+                                        guard showContent else { return }
+
+                                        // Only animate if it's a newly created item.
+                                        if isNewlyCreated {
+                                            // Animate character-by-character for the classic typing effect.
+                                            for char in funFact {
+                                                // A short delay between each character.
+                                                try? await Task.sleep(nanoseconds: 30_000_000) // 30ms
+                                                
+                                                // Ensure the task wasn't cancelled (e.g., view was dismissed).
+                                                if !Task.isCancelled {
+                                                    animatedFunFact.append(char)
+                                                }
+                                            }
+                                        } else {
+                                            // If it's not new, just show the full text immediately.
+                                            animatedFunFact = funFact
+                                        }
+                                    }
+                            }
+                            // If the item is confirmed not food and there's no fun fact, show a random message.
+                            else if foodItem.isFood == false {
+                                Text(randomNotFoodMessage)
+                                    .font(.custom("Georgia", size: 17))
+                                    .foregroundColor(.secondary)
+                                    .multilineTextAlignment(.leading)
+                                    .padding(.top)
+                            }
+                            // Otherwise, it's still loading.
+                            else {
                                 ProgressView()
                                     .padding(.top)
                             }
@@ -166,6 +182,9 @@ struct FoodDetailView: View {
                 .ignoresSafeArea()
             )
             .onAppear {
+                // Always reset the animation text when the view appears.
+                animatedFunFact = ""
+                
                 // If this view is part of a hero transition, delay the content appearance.
                 if namespace != nil {
                     // This delay allows the matchedGeometryEffect to complete.

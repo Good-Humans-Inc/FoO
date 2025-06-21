@@ -21,7 +21,6 @@ struct FoodItem: Identifiable, Codable, Equatable, Hashable {
     var isFood: Bool?
     var name: String?
     var funFact: String?
-    var nutrition: String?
     
     // A flag to determine if the item has special, rare content.
     var isSpecial: Bool?

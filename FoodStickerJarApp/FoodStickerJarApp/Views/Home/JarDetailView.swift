@@ -103,7 +103,7 @@ private struct FeedbackInputView: View {
     
     var body: some View {
         HStack(spacing: 12) {
-            TextField("Confused? Tell me about it...", text: $feedbackText)
+            TextField("Tell us anything!", text: $feedbackText)
                 .textFieldStyle(.plain)
                 .padding(.horizontal, 16)
                 .padding(.vertical, 10)

@@ -51,13 +51,25 @@ struct ShelfView: View {
                     }
                     
                     if showFeedbackInput {
-                        FeedbackInputView(feedbackText: $feedbackText) {
+                        FeedbackView(feedbackText: $feedbackText) {
                             viewModel.submitFeedback(feedbackText)
                             withAnimation {
                                 showFeedbackInput = false
                                 feedbackText = ""
                             }
                         }
+                        .gesture(
+                            DragGesture().onEnded { value in
+                                let swipeUp = value.translation.height < -50
+                                let swipeRight = value.translation.width > 50
+                                // If user swipes up or right, close the feedback box
+                                if swipeUp || swipeRight {
+                                    withAnimation {
+                                        showFeedbackInput = false
+                                    }
+                                }
+                            }
+                        )
                     } else {
                         Spacer()
                         // Exit Button
@@ -72,76 +84,60 @@ struct ShelfView: View {
                 .padding(.horizontal)
                 .padding(.top)
 
-                Spacer()
+                // This VStack groups the content below the header, allowing a single tap gesture.
+                VStack {
+                    Spacer()
 
-                // MARK: - Jars on Shelves
-                if viewModel.isLoading {
-                    ProgressView("Loading Shelf...")
-                        .frame(maxHeight: .infinity)
-                } else if viewModel.jars.isEmpty {
-                    // Special view for when there are no jars yet.
-                    VStack {
-                        Spacer()
-                        Text("(°ー°〃) Your shelf is empty.")
-                            .font(.title2)
-                            .foregroundColor(.secondary)
-                        Text("A jar will show up here when it's archived!")
-                            .font(.body)
-                            .foregroundColor(.secondary)
-                        Spacer()
-                    }
-                } else {
-                    ScrollView {
-                        VStack(spacing: 20) {
-                            ForEach(0..<jarRows.count, id: \.self) { rowIndex in
-                                let row = jarRows[rowIndex]
-                                ShelfRowView(row: row, userID: viewModel.userID)
-                            }
+                    // MARK: - Jars on Shelves
+                    if viewModel.isLoading {
+                        ProgressView("Loading Shelf...")
+                            .frame(maxHeight: .infinity)
+                    } else if viewModel.jars.isEmpty {
+                        // Special view for when there are no jars yet.
+                        VStack {
+                            Spacer()
+                            Text("(°ー°〃) Your shelf is empty.")
+                                .font(.title2)
+                                .foregroundColor(.secondary)
+                            Text("A jar will show up here when it's archived!")
+                                .font(.body)
+                                .foregroundColor(.secondary)
+                            Spacer()
                         }
-                        .padding(.top) // Add some space from the header
+                    } else {
+                        ScrollView {
+                            VStack(spacing: 20) {
+                                ForEach(0..<jarRows.count, id: \.self) { rowIndex in
+                                    let row = jarRows[rowIndex]
+                                    ShelfRowView(row: row, userID: viewModel.userID)
+                                }
+                            }
+                            .padding(.top) // Add some space from the header
+                        }
+                    }
+                    Spacer()
+                }
+                .onTapGesture {
+                    if showFeedbackInput {
+                        withAnimation {
+                            showFeedbackInput = false
+                        }
                     }
                 }
-                Spacer()
+            }
+            .onChange(of: showFeedbackInput) { isShowing in
+                if !isShowing {
+                    // Resign first responder to dismiss the keyboard
+                    UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
+                }
             }
         }
         .navigationBarHidden(true)
+        .ignoresSafeArea(.keyboard, edges: .bottom)
     }
 }
 
 // MARK: - Subviews
-
-/// A view for the feedback text field and submission button.
-private struct FeedbackInputView: View {
-    @Binding var feedbackText: String
-    var onSubmit: () -> Void
-    
-    var body: some View {
-        HStack(spacing: 12) {
-            TextField("Confused? Tell me about it...", text: $feedbackText)
-                .textFieldStyle(.plain)
-                .padding(.horizontal, 16)
-                .padding(.vertical, 10)
-                .background(.thinMaterial)
-                .clipShape(Capsule())
-
-            Button(action: onSubmit) {
-                Image(systemName: "arrow.up.circle.fill")
-                    .font(.system(size: 28, weight: .bold))
-                    .foregroundColor(feedbackText.isEmpty ? .gray : .themeAccent)
-            }
-            .disabled(feedbackText.isEmpty)
-        }
-        .padding(8)
-        .background(
-            .ultraThinMaterial,
-            in: RoundedRectangle(cornerRadius: 30, style: .continuous)
-        )
-        .shadow(color: .black.opacity(0.1), radius: 5, x: 0, y: 2)
-        .animation(.spring(response: 0.3, dampingFraction: 0.6), value: feedbackText.isEmpty)
-        .transition(.opacity.combined(with: .move(edge: .trailing)))
-    }
-}
-
 
 /// A view for a single shelf with up to 3 jars.
 private struct ShelfRowView: View {
