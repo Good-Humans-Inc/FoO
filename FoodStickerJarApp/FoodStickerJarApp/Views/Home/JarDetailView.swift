@@ -23,10 +23,10 @@ struct JarDetailView: View {
                             showFeedbackInput.toggle()
                         }
                     }) {
-                        Image("logoIcon")
+                        Image("jasIcon")
                             .resizable()
                             .scaledToFit()
-                            .frame(height: 84)
+                            .frame(height: 56)
                     }
                     
                     if showFeedbackInput {

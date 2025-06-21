@@ -27,7 +27,7 @@ struct HomeView: View {
                                 showFeedbackInput.toggle()
                             }
                         }) {
-                            Image("logoIcon")
+                            Image("jasIcon")
                                 .resizable()
                                 .scaledToFit()
                                 .frame(width: 84, height: 84)

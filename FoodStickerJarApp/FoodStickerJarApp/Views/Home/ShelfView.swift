@@ -44,10 +44,10 @@ struct ShelfView: View {
                             showFeedbackInput.toggle()
                         }
                     }) {
-                        Image("logoIcon") // Make sure this asset exists
+                        Image("jasIcon")
                             .resizable()
                             .scaledToFit()
-                            .frame(height: 84)
+                            .frame(height: 56)
                     }
                     
                     if showFeedbackInput {

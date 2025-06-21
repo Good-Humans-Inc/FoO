@@ -272,9 +272,9 @@ class HomeViewModel: ObservableObject {
                 // If the user is currently viewing the detail of the sticker that just
                 // finished analyzing, we must also update the selectedFoodItem directly.
                 // This ensures the detail view, which is bound to selectedFoodItem, refreshes immediately.
-                if self.selectedFoodItem?.id == finalItem.id {
+                if self.navigationRouter.selectedFoodItem?.id == finalItem.id {
                     print("[HomeViewModel] Refreshing currently visible detail view.")
-                    self.selectedFoodItem = finalItem
+                    self.navigationRouter.selectedFoodItem = finalItem
                 }
             }
 
