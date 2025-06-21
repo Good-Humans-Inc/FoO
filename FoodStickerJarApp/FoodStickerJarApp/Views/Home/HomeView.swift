@@ -79,7 +79,7 @@ struct HomeView: View {
                         Spacer()
                         Button(action: {
                             let stickerCount = viewModel.userProfile?.stickerCount ?? 0
-                            if appState.isSubscribed || stickerCount < 5 {
+                            if appState.isSubscribed || stickerCount < 20 {
                                 showImageProcessingSheet = true
                             } else {
                                 showPaywallCover = true

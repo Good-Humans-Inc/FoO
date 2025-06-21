@@ -29,6 +29,10 @@ class HomeViewModel: ObservableObject {
     // when the view is dismissed.
     private var stickerToCommit: FoodItem?
     
+    // Holds the generated UIImage of the new sticker, so it can be passed
+    // directly to the JarScene without waiting for the URL to be available.
+    private var stickerImageToCommit: UIImage?
+    
     // State properties for managing the sticker creation UI flow.
     @Published var isSavingSticker = false
     @Published var stickerCreationError: String?
@@ -174,6 +178,9 @@ class HomeViewModel: ObservableObject {
         // 1. Set state to show a loading UI.
         print("[HomeViewModel] Starting processNewSticker in the background.")
         
+        // --- FIX: Store the local UIImage for the commit ---
+        self.stickerImageToCommit = stickerImage
+        
         // Determine if the sticker is special to play the correct sound.
         let isSpecial = newSticker?.isSpecial ?? false
         if isSpecial {
@@ -302,6 +309,7 @@ class HomeViewModel: ObservableObject {
     func resetTemporaryState() {
         self.newSticker = nil
         self.stickerToCommit = nil
+        self.stickerImageToCommit = nil
     }
     
     /// Submits user-provided feedback via the FeedbackService.
@@ -432,12 +440,16 @@ class HomeViewModel: ObservableObject {
         
         if !foodItems.contains(where: { $0.id == sticker.id }) {
             foodItems.append(sticker)
-            jarScene.addSticker(foodItem: sticker, isNew: true)
+            // --- FIX: Use the new addSticker method with the local UIImage ---
+            // Pass the locally-stored UIImage directly to the scene.
+            // This ensures the sticker appears immediately without waiting for network operations.
+            jarScene.addSticker(foodItem: sticker, image: stickerImageToCommit, isNew: true)
         }
         
         // Clear the temporary sticker state.
         self.newSticker = nil
         self.stickerToCommit = nil
+        self.stickerImageToCommit = nil
     }
     
     private func checkForAutoArchive(from source: String) async {
