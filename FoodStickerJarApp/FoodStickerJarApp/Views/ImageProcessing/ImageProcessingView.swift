@@ -53,8 +53,9 @@ struct ImageProcessingView: View {
                     
                     // Launch a detached background task to handle the slow work
                     // of saving the images and data to the network.
+                    print("➡️ [ImageProcessingView] Kicking off background cloud task for sticker \(stickerID).")
                     Task {
-                        await viewModel.processNewSticker(id: stickerID, originalImage: image, stickerImage: finalSticker)
+                        await viewModel.processStickerInCloud(id: stickerID, originalImage: image, stickerImage: finalSticker)
                     }
                     
                     // Mark that we are ready to commit.
@@ -72,23 +73,13 @@ struct ImageProcessingView: View {
             case .finished:
                 // This state is no longer used, but we'll keep it for now.
                 EmptyView()
-                    .onAppear {
-                        // Dismiss the sheet once we enter the finished state.
-                        print("[ImageProcessingView] .finished state appeared. Dismissing sheet.")
-                        dismiss()
-                    }
             }
         }
         .onDisappear {
-            // This is the definitive point where the user has dismissed the sheet.
-            // We only commit the sticker if one has actually been processed.
-            if hasProcessedSticker {
-                print("[ImageProcessingView] Disappearing with a processed sticker. Committing.")
-                viewModel.commitNewStickerIfNecessary()
-                viewModel.resetTemporaryState()
-            } else {
-                print("[ImageProcessingView] Disappearing without a processed sticker. No action taken.")
-            }
+            // The new, robust commit logic is now handled by the StickerCreationView's
+            // onDisappear modifier, which calls `handleStickerCreationDismissal`.
+            // This entire block is no longer needed and can be safely removed to
+            // avoid confusion and potential future bugs.
         }
     }
 }

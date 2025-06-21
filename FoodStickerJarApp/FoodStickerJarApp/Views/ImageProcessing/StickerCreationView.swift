@@ -110,7 +110,9 @@ struct StickerCreationView: View {
         }
         .onDisappear {
             // This is the final step, called when the sheet is dismissed.
-            print("[StickerCreationView] onDisappear triggered.")
+            // This is the correct and reliable place to commit the sticker.
+            print("➡️ [StickerCreationView] View disappeared. Triggering dismissal handler.")
+            viewModel.handleStickerCreationDismissal()
         }
     }
     

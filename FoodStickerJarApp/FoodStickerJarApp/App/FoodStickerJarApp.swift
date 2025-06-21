@@ -1,6 +1,28 @@
 import SwiftUI
 import Firebase
 
+/// A container view that manages the lifecycle of the HomeViewModel.
+/// By creating the view model as a @StateObject here, we ensure it is
+/// created only once and persists for the entire user session.
+struct HomeContainerView: View {
+    @StateObject private var homeViewModel: HomeViewModel
+    
+    // The AppState is passed down from the parent.
+    @EnvironmentObject var appState: AppStateManager
+    
+    init(authService: AuthenticationService, navigationRouter: NavigationRouter) {
+        // This is the key: the StateObject is initialized only once when
+        // HomeContainerView is first created.
+        _homeViewModel = StateObject(wrappedValue: HomeViewModel(authService: authService, navigationRouter: navigationRouter))
+    }
+    
+    var body: some View {
+        HomeView()
+            .environmentObject(homeViewModel)
+            .environmentObject(appState) // Pass the appState along
+    }
+}
+
 @main
 struct FoodStickerJarApp: App {
     // Connect the AppDelegate to the SwiftUI app lifecycle.
@@ -32,10 +54,9 @@ struct FoodStickerJarApp: App {
                         appState.completeOnboarding()
                     }
                 } else if authService.user != nil {
-                    // We create the HomeViewModel here, only after we know the user is signed in.
-                    // This ensures that all services are initialized in the correct order.
-                    HomeView()
-                        .environmentObject(HomeViewModel(authService: authService, navigationRouter: navigationRouter))
+                    // We now use the container view, ensuring the view model's lifecycle
+                    // is correctly managed. We also pass the appState to it.
+                    HomeContainerView(authService: authService, navigationRouter: navigationRouter)
                         .environmentObject(appState)
                 } else {
                     // Show a loading view while Firebase is authenticating the user.
