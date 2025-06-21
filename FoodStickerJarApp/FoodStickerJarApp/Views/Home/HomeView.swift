@@ -7,9 +7,10 @@ struct HomeView: View {
     // Manages the presentation of the image picker and cropper.
     @State private var showImageProcessingSheet = false
 
-    // State for the new UI
+    // State to control the feedback UI
     @State private var showFeedbackInput = false
-    @State private var feedbackText = ""
+    
+    // State for the new UI is now managed in AppHeaderView
     @State private var jarViewSize: CGSize = .zero
     
     /// A computed binding that serves as the single source of truth for presenting our cover.
@@ -37,65 +38,18 @@ struct HomeView: View {
                 
                 // Main content VStack
                 VStack(spacing: 0) {
-                    // Top bar with new buttons
-                    HStack(spacing: 12) {
-                        Button(action: {
-                            withAnimation {
-                                // Toggle the feedback input view's visibility.
-                                showFeedbackInput.toggle()
-                            }
-                        }) {
-                            Image("logoIcon") // Make sure this asset exists
+                    AppHeaderView(
+                        showFeedbackInput: $showFeedbackInput,
+                        submitFeedback: viewModel.submitFeedback
+                    ) {
+                        NavigationLink(destination: ShelfView()) {
+                            Image("shelfIcon")
                                 .resizable()
                                 .scaledToFit()
                                 .frame(width: 84, height: 84)
-                                .clipShape(Circle())
                         }
-                        .simultaneousGesture(
-                            LongPressGesture(minimumDuration: 5)
-                                .onEnded { _ in
-                                    print("Backdoor: Long press detected. Initiating archive.")
-                                    viewModel.initiateArchiving()
-                                }
-                        )
-                        
-                        if showFeedbackInput {
-                            FeedbackView(feedbackText: $feedbackText) {
-                                viewModel.submitFeedback(feedbackText)
-                                withAnimation {
-                                    showFeedbackInput = false
-                                    feedbackText = ""
-                                }
-                            }
-                            .gesture(
-                                DragGesture()
-                                    .onEnded { value in
-                                        let swipeUp = value.translation.height < -50
-                                        let swipeRight = value.translation.width > 50
-                                        // If user swipes up or right, close the feedback box
-                                        if swipeUp || swipeRight {
-                                            withAnimation {
-                                                showFeedbackInput = false
-                                            }
-                                        }
-                                    }
-                            )
-                        }
-                        
-                        Spacer()
-                        
-                        if !showFeedbackInput {
-                            NavigationLink(destination: ShelfView()) {
-                                Image("shelfIcon") // Make sure this asset exists
-                                    .resizable()
-                                    .scaledToFit()
-                                    .frame(width: 84, height: 84)
-                            }
-                            .transition(.opacity)
-                        }
+                        .transition(.opacity)
                     }
-                    .padding(.horizontal)
-                    .padding(.top, 5) // Give it a little space from the top edge
                     .frame(height: 90) // Give the top bar a fixed height
                     
                     GeometryReader { geo in
@@ -122,12 +76,6 @@ struct HomeView: View {
                                 showFeedbackInput = false
                             }
                         }
-                    }
-                }
-                .onChange(of: showFeedbackInput) { isShowing in
-                    if !isShowing {
-                        // Resign first responder to dismiss the keyboard
-                        UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
                     }
                 }
                 .onChange(of: viewModel.triggerSnapshot) { shouldSnapshot in

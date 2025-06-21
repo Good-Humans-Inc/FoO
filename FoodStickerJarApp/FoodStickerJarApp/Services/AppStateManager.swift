@@ -7,7 +7,7 @@ class AppStateManager: ObservableObject {
     /// builds and `false` for Release builds.
     private var forceShowOnboardingForTesting: Bool {
         #if DEBUG
-        return true // Always show onboarding for developers
+        return false // Always show onboarding for developers
         #else
         return false // Never show onboarding for App Store users
         #endif

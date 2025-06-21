@@ -1,8 +1,9 @@
 import SwiftUI
 
 struct FeedbackView: View {
-    @Binding var feedbackText: String
-    var onSubmit: () -> Void
+    /// A closure that is called when the user wants to start typing feedback.
+    /// This will be used by the parent view to present the feedback sheet.
+    var onStartTyping: () -> Void
 
     // --- Contact Info ---
     // You can replace these with your actual links and email address.
@@ -15,21 +16,17 @@ struct FeedbackView: View {
 
     var body: some View {
         VStack(spacing: 12) {
-            // Main input section
-            HStack(spacing: 12) {
-                TextField("Tell us anything!", text: $feedbackText)
-                    .textFieldStyle(.plain)
-                    .padding(.horizontal, 16)
-                    .padding(.vertical, 10)
-                    .background(Color.white.opacity(0.5))
-                    .clipShape(Capsule())
-
-                Button(action: onSubmit) {
-                    Image(systemName: "arrow.up.circle.fill")
-                        .font(.system(size: 28, weight: .bold))
-                        .foregroundColor(feedbackText.isEmpty ? .gray.opacity(0.5) : .themeAccent)
+            // This button looks like a text field and triggers the sheet presentation.
+            Button(action: onStartTyping) {
+                HStack {
+                    Text("Tell us anything!")
+                        .foregroundColor(Color.primary.opacity(0.6))
+                    Spacer()
                 }
-                .disabled(feedbackText.isEmpty)
+                .padding(.horizontal, 16)
+                .padding(.vertical, 10)
+                .background(Color.white.opacity(0.5))
+                .clipShape(Capsule())
             }
             
             Group {
@@ -72,7 +69,6 @@ struct FeedbackView: View {
             in: RoundedRectangle(cornerRadius: 30, style: .continuous)
         )
         .shadow(color: .black.opacity(0.1), radius: 5, x: 0, y: 2)
-        .animation(.spring(response: 0.3, dampingFraction: 0.6), value: feedbackText.isEmpty)
         .animation(.easeIn(duration: 0.2), value: didCopyEmail)
         .transition(.opacity.combined(with: .move(edge: .trailing)))
     }
@@ -99,7 +95,7 @@ struct FeedbackView_Previews: PreviewProvider {
     static var previews: some View {
         ZStack {
             Color.themeBackground.ignoresSafeArea()
-            FeedbackView(feedbackText: .constant(""), onSubmit: {})
+            FeedbackView(onStartTyping: {})
         }
     }
 } 

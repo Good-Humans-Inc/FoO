@@ -5,9 +5,10 @@ struct ShelfView: View {
     @StateObject private var viewModel = ShelfViewModel()
     @Environment(\.dismiss) private var dismiss
     
-    // State for the feedback UI
+    // State to control the feedback UI
     @State private var showFeedbackInput = false
-    @State private var feedbackText = ""
+    
+    // State for the feedback UI is now managed in AppHeaderView
     
     // We no longer need a fixed total number of slots.
     
@@ -35,54 +36,19 @@ struct ShelfView: View {
         ZStack {
             Color.white.ignoresSafeArea()
             
-            VStack(spacing: 20) {
+            VStack(spacing: 0) {
                 // MARK: - Custom Header
-                HStack(alignment: .center, spacing: 12) {
-                    // Logo and feedback button
-                    Button(action: {
-                        withAnimation {
-                            showFeedbackInput.toggle()
-                        }
-                    }) {
-                        Image("logoIcon") // Make sure this asset exists
+                AppHeaderView(
+                    showFeedbackInput: $showFeedbackInput,
+                    submitFeedback: viewModel.submitFeedback
+                ) {
+                    Button(action: { dismiss() }) {
+                        Image("exit")
                             .resizable()
                             .scaledToFit()
                             .frame(height: 84)
                     }
-                    
-                    if showFeedbackInput {
-                        FeedbackView(feedbackText: $feedbackText) {
-                            viewModel.submitFeedback(feedbackText)
-                            withAnimation {
-                                showFeedbackInput = false
-                                feedbackText = ""
-                            }
-                        }
-                        .gesture(
-                            DragGesture().onEnded { value in
-                                let swipeUp = value.translation.height < -50
-                                let swipeRight = value.translation.width > 50
-                                // If user swipes up or right, close the feedback box
-                                if swipeUp || swipeRight {
-                                    withAnimation {
-                                        showFeedbackInput = false
-                                    }
-                                }
-                            }
-                        )
-                    } else {
-                        Spacer()
-                        // Exit Button
-                        Button(action: { dismiss() }) {
-                            Image("exit") // Use the custom exit icon
-                                .resizable()
-                                .scaledToFit()
-                                .frame(height: 84)
-                        }
-                    }
                 }
-                .padding(.horizontal)
-                .padding(.top)
 
                 // This VStack groups the content below the header, allowing a single tap gesture.
                 VStack {
@@ -123,12 +89,6 @@ struct ShelfView: View {
                             showFeedbackInput = false
                         }
                     }
-                }
-            }
-            .onChange(of: showFeedbackInput) { isShowing in
-                if !isShowing {
-                    // Resign first responder to dismiss the keyboard
-                    UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
                 }
             }
         }
