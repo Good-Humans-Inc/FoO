@@ -71,6 +71,10 @@ class FirestoreService {
         let stickerDocument = db.collection("users").document(userID).collection("stickers").document(stickerID.uuidString)
         try stickerDocument.setData(from: foodItem)
         
+        // Atomically increment the user's sticker count.
+        let userDocument = db.collection("users").document(userID)
+        try await userDocument.setData(["stickerCount": FieldValue.increment(Int64(1))], merge: true)
+        
         print("✅ FirestoreService: Successfully created and saved sticker metadata for \(stickerID.uuidString).")
         
         return foodItem
@@ -238,6 +242,14 @@ class FirestoreService {
         print("✅ FirestoreService: Successfully archived jar \(newJarRef.documentID) for user \(userID).")
         
         return newJarItem
+    }
+    
+    /// Fetches a single user profile document.
+    /// - Parameter userID: The ID of the user to fetch.
+    /// - Returns: The `User` object.
+    func fetchUser(for userID: String) async throws -> User {
+        let userDocument = db.collection("users").document(userID)
+        return try await userDocument.getDocument(as: User.self)
     }
     
     /// Fetches all jars belonging to a specific user.

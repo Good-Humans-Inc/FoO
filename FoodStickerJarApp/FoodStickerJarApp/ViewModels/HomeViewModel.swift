@@ -14,8 +14,12 @@ class HomeViewModel: ObservableObject {
     // The master list of all food items.
     @Published var foodItems: [FoodItem] = []
     
-    // The currently selected item for viewing in the detail view.
-    @Published var selectedFoodItem: FoodItem?
+    // The user's profile data.
+    @Published var userProfile: User?
+    
+    // The detail view is now managed by the router.
+    // We hold a reference to it to communicate selections.
+    private let navigationRouter: NavigationRouter
     
     // Holds the newly created sticker to be shown in the detail sheet
     // before it's added to the main jar.
@@ -64,7 +68,9 @@ class HomeViewModel: ObservableObject {
 
     // MARK: - Initializer
     
-    init(authService: AuthenticationService) {
+    init(authService: AuthenticationService, navigationRouter: NavigationRouter) {
+        self.navigationRouter = navigationRouter
+        
         // Scene communication needs to be set up immediately.
         // The scene itself will be populated once its size is known from the view.
         setupJarSceneCommunication()
@@ -86,6 +92,10 @@ class HomeViewModel: ObservableObject {
                     Task {
                         await self.loadStickersFromFirestore()
                     }
+                }
+                
+                Task {
+                    await self.loadUserProfile()
                 }
             }
             .store(in: &cancellables)
@@ -169,7 +179,7 @@ class HomeViewModel: ObservableObject {
         if isSpecial {
             SoundManager.shared.playSound(named: "specialGen")
         } else {
-            SoundManager.shared.playSound(named: "normalGen")
+            SoundManager.shared.playSound(named: "normyGen")
         }
         
         guard let userId = self.userId else {
@@ -245,6 +255,12 @@ class HomeViewModel: ObservableObject {
                     self.stickerToCommit = finalItem
                 }
                 
+                // After successfully creating a sticker, reload the user profile
+                // to get the updated sticker count.
+                Task {
+                    await self.loadUserProfile()
+                }
+                
                 // --- FIX: Update the item in the main array as well ---
                 // This handles the case where the user dismissed the sheet before
                 // analysis completed. The item is already in the jar, but its
@@ -268,23 +284,9 @@ class HomeViewModel: ObservableObject {
     /// collection and the physics scene. This is called after the detail
     /// view for a new sticker is dismissed.
     func commitNewStickerIfNecessary() {
-        // Use the private, safe-guarded copy of the sticker.
-        guard let item = stickerToCommit else {
-            print("[HomeViewModel] commitNewStickerIfNecessary called, but no sticker to commit.")
-            // This can happen if the user dismisses the regular detail view, so we just ignore it.
-            return
-        }
-        
-        // Check if the critical data (the thumbnail URL) is ready.
-        if !item.thumbnailURLString.isEmpty {
-            // Data is ready. We can commit immediately.
-            print("[HomeViewModel] Sticker is ready. Committing immediately.")
+        if commitIsPending || newSticker != nil {
             commitStickerToJar()
-        } else {
-            // Data is not ready because the background task is still running.
-            // Set a flag indicating that as soon as the data is ready, a commit should happen.
-            print("[HomeViewModel] Sticker not ready. Deferring commit.")
-            self.commitIsPending = true
+            commitIsPending = false
         }
     }
     
@@ -293,7 +295,6 @@ class HomeViewModel: ObservableObject {
     func resetTemporaryState() {
         self.newSticker = nil
         self.stickerToCommit = nil
-        self.commitIsPending = false // Reset the flag
     }
     
     /// Submits user-provided feedback via the FeedbackService.
@@ -415,26 +416,21 @@ class HomeViewModel: ObservableObject {
     // MARK: - Private Helper Methods
     
     private func commitStickerToJar() {
-        guard let itemToAdd = stickerToCommit else {
-            print("[HomeViewModel] commitStickerToJar called, but no sticker to commit.")
+        guard let sticker = stickerToCommit else {
+            print("Warning: commitStickerToJar was called but stickerToCommit was nil.")
             return
         }
         
-        print("[HomeViewModel] Committing sticker ID \(itemToAdd.id) to the jar.")
-        // 1. Add the sticker to the main data array.
-        foodItems.append(itemToAdd)
+        print("[HomeViewModel] Committing sticker to jar: \(sticker.id)")
         
-        // 2. Add the sticker to the physics scene, triggering the animation.
-        jarScene.addSticker(foodItem: itemToAdd, isNew: true)
-        
-        // 3. Clear all temporary state to signify the commit is complete.
-        print("[HomeViewModel] Sticker committed. Clearing all temporary state.")
-        resetTemporaryState()
-
-        // 4. Check if the jar should be auto-archived.
-        Task {
-            await checkForAutoArchive(from: "stickerCommit")
+        if !foodItems.contains(where: { $0.id == sticker.id }) {
+            foodItems.append(sticker)
+            jarScene.addSticker(foodItem: sticker, isNew: true)
         }
+        
+        // Clear the temporary sticker state.
+        self.newSticker = nil
+        self.stickerToCommit = nil
     }
     
     private func checkForAutoArchive(from source: String) async {
@@ -469,8 +465,8 @@ class HomeViewModel: ObservableObject {
     
     /// Loads the user's stickers from Firestore and populates the physics scene.
     private func loadStickersFromFirestore() async {
-        guard let userId = userId else {
-            print("HomeViewModel: Cannot load stickers, user ID is missing.")
+        guard let userId = self.userId else {
+            print("HomeViewModel: Cannot load stickers, user ID is nil.")
             return
         }
         
@@ -489,11 +485,31 @@ class HomeViewModel: ObservableObject {
     /// Listens for tap events broadcasted from the JarScene.
     private func setupJarSceneCommunication() {
         jarScene.onStickerTapped
-            .receive(on: DispatchQueue.main) // Ensure we switch to the main thread
             .sink { [weak self] tappedItemID in
-                // Find the food item that corresponds to the tapped sticker's ID.
-                self?.selectedFoodItem = self?.foodItems.first(where: { $0.id == tappedItemID })
+                guard let self = self else { return }
+                if let tappedItem = self.foodItems.first(where: { $0.id == tappedItemID }) {
+                    // Tell the router to present the detail view.
+                    self.navigationRouter.selectedFoodItem = tappedItem
+                }
             }
             .store(in: &cancellables)
+    }
+    
+    /// Loads the current user's profile from Firestore.
+    func loadUserProfile() async {
+        guard let userId = self.userId else {
+            print("HomeViewModel: Cannot load user profile, user ID is nil.")
+            return
+        }
+        
+        do {
+            let user = try await firestoreService.fetchUser(for: userId)
+            await MainActor.run {
+                self.userProfile = user
+                print("✅ HomeViewModel: Successfully loaded user profile. Sticker count: \(user.stickerCount ?? 0)")
+            }
+        } catch {
+            print("❌ HomeViewModel: Failed to load user profile: \(error.localizedDescription)")
+        }
     }
 }

@@ -21,6 +21,7 @@ class AppStateManager: ObservableObject {
     @Published var isInitialized = false
 
     @Published var isOnboardingCompleted: Bool = false
+    @Published var isSubscribed: Bool = false
     
     private let onboardingCompletedKey = "isOnboardingCompleted"
     
@@ -50,5 +51,9 @@ class AppStateManager: ObservableObject {
         if !self.isInitialized {
             self.isInitialized = true
         }
+    }
+
+    func updateSubscriptionStatus(_ isSubscribed: Bool) {
+        self.isSubscribed = isSubscribed
     }
 } 
