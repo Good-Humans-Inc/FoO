@@ -36,6 +36,29 @@ struct AppHeaderView<TrailingContent: View>: View {
                     FeedbackView(onStartTyping: {
                         showFeedbackSheet = true
                     })
+                    .gesture(
+                        DragGesture().onEnded { value in
+                            let horizontal = value.translation.width
+                            let vertical = value.translation.height
+                            let swipeThreshold: CGFloat = 50
+
+                            if abs(horizontal) > abs(vertical) {
+                                // Right swipe
+                                if horizontal > swipeThreshold {
+                                    withAnimation {
+                                        showFeedbackInput = false
+                                    }
+                                }
+                            } else {
+                                // Up swipe
+                                if vertical < -swipeThreshold {
+                                    withAnimation {
+                                        showFeedbackInput = false
+                                    }
+                                }
+                            }
+                        }
+                    )
                 } else {
                     Spacer()
                     // Custom trailing content

@@ -39,17 +39,6 @@ struct HomeView: View {
                         ZStack {
                             JarContainerView(jarScene: viewModel.jarScene, size: geo.size)
                                 .disabled(showFeedbackInput)
-
-                            // Overlay for dismissing feedback
-                            if showFeedbackInput {
-                                Color.clear
-                                    .contentShape(Rectangle())
-                                    .onTapGesture {
-                                        withAnimation {
-                                            showFeedbackInput = false
-                                        }
-                                    }
-                            }
                         }
                         .frame(width: geo.size.width, height: geo.size.height)
                         .offset(y: -40)
@@ -124,6 +113,10 @@ struct HomeView: View {
         .sheet(isPresented: $showImageProcessingSheet) {
             ImageProcessingView()
                 .environmentObject(viewModel)
+                .onDisappear {
+                    print("[HomeView] ImageProcessingView sheet disappearing. Attempting to commit sticker.")
+                    viewModel.commitNewStickerIfNecessary()
+                }
         }
         .fullScreenCover(isPresented: $showPaywallCover) {
             PaywallView(isPresented: $showPaywallCover)
