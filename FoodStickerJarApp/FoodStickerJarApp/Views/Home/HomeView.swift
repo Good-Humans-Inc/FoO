@@ -10,7 +10,8 @@ struct HomeView: View {
     
     // UI State
     @State private var showFeedbackInput = false
-    @State private var feedbackText = ""
+    
+    // State for the new UI is now managed in AppHeaderView
     @State private var jarViewSize: CGSize = .zero
 
     var body: some View {
@@ -20,64 +21,19 @@ struct HomeView: View {
                 
                 // Main content VStack
                 VStack(spacing: 0) {
-                    // Top bar UI
-                    HStack(spacing: 12) {
-                        Button(action: {
-                            withAnimation {
-                                showFeedbackInput.toggle()
-                            }
-                        }) {
-                            Image("jasIcon")
+                    AppHeaderView(
+                        showFeedbackInput: $showFeedbackInput,
+                        submitFeedback: viewModel.submitFeedback
+                    ) {
+                        NavigationLink(destination: ShelfView()) {
+                            Image("shelfIcon")
                                 .resizable()
                                 .scaledToFit()
                                 .frame(width: 84, height: 84)
-                                .clipShape(Circle())
                         }
-                        .simultaneousGesture(
-                            LongPressGesture(minimumDuration: 5)
-                                .onEnded { _ in
-                                    viewModel.initiateArchiving()
-                                }
-                        )
-                        
-                        if showFeedbackInput {
-                            FeedbackView(feedbackText: $feedbackText) {
-                                viewModel.submitFeedback(feedbackText)
-                                withAnimation {
-                                    showFeedbackInput = false
-                                    feedbackText = ""
-                                }
-                            }
-                            .gesture(
-                                DragGesture()
-                                    .onEnded { value in
-                                        let swipeUp = value.translation.height < -50
-                                        let swipeRight = value.translation.width > 50
-                                        // If user swipes up or right, close the feedback box
-                                        if swipeUp || swipeRight {
-                                            withAnimation {
-                                                showFeedbackInput = false
-                                            }
-                                        }
-                                    }
-                            )
-                        }
-                        
-                        Spacer()
-                        
-                        if !showFeedbackInput {
-                            NavigationLink(destination: ShelfView()) {
-                                Image("shelfIcon")
-                                    .resizable()
-                                    .scaledToFit()
-                                    .frame(width: 84, height: 84)
-                            }
-                            .transition(.opacity)
-                        }
+                        .transition(.opacity)
                     }
-                    .padding(.horizontal)
-                    .padding(.top, 5)
-                    .frame(height: 90)
+                    .frame(height: 90) // Give the top bar a fixed height
                     
                     // Jar view
                     GeometryReader { geo in
@@ -99,12 +55,6 @@ struct HomeView: View {
                                 showFeedbackInput = false
                             }
                         }
-                    }
-                }
-                .onChange(of: showFeedbackInput) { isShowing in
-                    if !isShowing {
-                        // Resign first responder to dismiss the keyboard
-                        UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
                     }
                 }
                 .onChange(of: viewModel.triggerSnapshot) { shouldSnapshot in
