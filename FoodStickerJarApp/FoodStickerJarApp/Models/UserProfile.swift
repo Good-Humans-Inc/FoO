@@ -5,9 +5,13 @@ import FirebaseFirestore
 struct User: Codable, Identifiable {
     // The user's ID, which will match the document ID.
     @DocumentID var id: String?
+    var fcmToken: String?
     
     // The list of IDs for all jars archived by this user.
     let jarIDs: [String]
+    
+    // The number of stickers created by this user.
+    var stickerCount: Int?
     
     // MARK: - Onboarding Data
     var name: String?
@@ -15,4 +19,5 @@ struct User: Codable, Identifiable {
     var pronoun: String?
     var goals: [String]?
     var onboardingCompleted: Bool?
+    var timezone: String?
 } 
