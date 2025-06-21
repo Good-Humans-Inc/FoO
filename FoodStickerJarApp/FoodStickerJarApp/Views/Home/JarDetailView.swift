@@ -32,19 +32,25 @@ struct JarDetailView: View {
 
                 // MARK: - Jar Content
                 GeometryReader { geo in
-                    JarContainerView(jarScene: viewModel.jarScene, size: geo.size)
-                        .onAppear {
-                            let spriteViewWidth = geo.size.width * 0.78
-                            let spriteViewHeight = (geo.size.width * 1.8) * 0.72
-                            viewModel.setupScene(with: CGSize(width: spriteViewWidth, height: spriteViewHeight))
+                    ZStack {
+                        JarContainerView(jarScene: viewModel.jarScene, size: geo.size)
+                            .disabled(showFeedbackInput)
+
+                        if showFeedbackInput {
+                            Color.clear
+                                .contentShape(Rectangle())
+                                .onTapGesture {
+                                    withAnimation {
+                                        showFeedbackInput = false
+                                    }
+                                }
                         }
-                }
-                .offset(y: -80)
-                .onTapGesture {
-                    if showFeedbackInput {
-                        withAnimation {
-                            showFeedbackInput = false
-                        }
+                    }
+                    .offset(y: -80)
+                    .onAppear {
+                        let spriteViewWidth = geo.size.width * 0.78
+                        let spriteViewHeight = (geo.size.width * 1.8) * 0.72
+                        viewModel.setupScene(with: CGSize(width: spriteViewWidth, height: spriteViewHeight))
                     }
                 }
 

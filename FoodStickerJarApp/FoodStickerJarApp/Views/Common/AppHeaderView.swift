@@ -25,10 +25,10 @@ struct AppHeaderView<TrailingContent: View>: View {
                         showFeedbackInput.toggle()
                     }
                 }) {
-                    Image("logoIcon")
+                    Image("jasIcon")
                         .resizable()
                         .scaledToFit()
-                        .frame(height: 84)
+                        .frame(height: 44)
                 }
                 
                 if showFeedbackInput {
@@ -36,17 +36,6 @@ struct AppHeaderView<TrailingContent: View>: View {
                     FeedbackView(onStartTyping: {
                         showFeedbackSheet = true
                     })
-                    .highPriorityGesture(
-                        DragGesture().onEnded { value in
-                            let swipeUp = value.translation.height < -50
-                            let swipeRight = value.translation.width > 50
-                            if swipeUp || swipeRight {
-                                withAnimation {
-                                    showFeedbackInput = false
-                                }
-                            }
-                        }
-                    )
                 } else {
                     Spacer()
                     // Custom trailing content

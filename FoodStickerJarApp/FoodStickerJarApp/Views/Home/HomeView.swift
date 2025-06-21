@@ -35,24 +35,30 @@ struct HomeView: View {
                     }
                     .frame(height: 90) // Give the top bar a fixed height
                     
-                    // Jar view
                     GeometryReader { geo in
-                        JarContainerView(jarScene: viewModel.jarScene, size: geo.size)
-                            .frame(width: geo.size.width, height: geo.size.height)
-                            .offset(y: -40)
-                            .onAppear {
-                                self.jarViewSize = geo.size
-                                let spriteViewSize = CGSize(width: geo.size.width * 0.78, height: geo.size.width * 1.8 * 0.72)
-                                viewModel.setupScene(with: spriteViewSize)
-                                if viewModel.foodItems.isEmpty {
-                                    viewModel.clearJarView()
-                                }
+                        ZStack {
+                            JarContainerView(jarScene: viewModel.jarScene, size: geo.size)
+                                .disabled(showFeedbackInput)
+
+                            // Overlay for dismissing feedback
+                            if showFeedbackInput {
+                                Color.clear
+                                    .contentShape(Rectangle())
+                                    .onTapGesture {
+                                        withAnimation {
+                                            showFeedbackInput = false
+                                        }
+                                    }
                             }
-                    }
-                    .onTapGesture {
-                        if showFeedbackInput {
-                            withAnimation {
-                                showFeedbackInput = false
+                        }
+                        .frame(width: geo.size.width, height: geo.size.height)
+                        .offset(y: -40)
+                        .onAppear {
+                            self.jarViewSize = geo.size
+                            let spriteViewSize = CGSize(width: geo.size.width * 0.78, height: geo.size.width * 1.8 * 0.72)
+                            viewModel.setupScene(with: spriteViewSize)
+                            if viewModel.foodItems.isEmpty {
+                                viewModel.clearJarView()
                             }
                         }
                     }
