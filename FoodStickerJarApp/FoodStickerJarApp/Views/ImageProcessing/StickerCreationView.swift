@@ -49,7 +49,7 @@ struct StickerCreationView: View {
             let _ = print("[StickerCreationView] Current animation state: \(animationState)")
 
             if animationState == .detailView {
-                FoodDetailView(foodItem: $viewModel.newSticker, stickerImage: stickerImage, namespace: namespace, isNewlyCreated: true)
+                FoodDetailView(foodItem: .constant(viewModel.newSticker), stickerImage: stickerImage, namespace: namespace, isNewlyCreated: true)
                 
             } else if animationState == .holographic {
                 // For special items, show the sticker fading in over a

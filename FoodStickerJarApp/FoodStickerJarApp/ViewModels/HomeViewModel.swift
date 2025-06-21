@@ -45,6 +45,10 @@ class HomeViewModel: ObservableObject {
     // the sticker's network operations are complete.
     private var commitIsPending = false
     
+    // A flag to ensure the commit logic only runs for newly created stickers,
+    // not when viewing an old sticker's detail card.
+    private var isCommittingNewSticker = false
+    
     // MARK: - Services and Engine
     
     // A single, persistent instance of the physics scene. This is crucial
@@ -164,6 +168,10 @@ class HomeViewModel: ObservableObject {
         print("[HomeViewModel] Preparing for animation. New sticker ID: \(stickerID). Is Special: \(isSpecial)")
         self.newSticker = tempItem
         self.stickerToCommit = tempItem
+        
+        // --- FIX: Set the commit flag to true ---
+        // This indicates that a new sticker is in the process of being created.
+        self.isCommittingNewSticker = true
         
         return stickerID
     }
@@ -298,6 +306,13 @@ class HomeViewModel: ObservableObject {
     /// collection and the physics scene. This is called after the detail
     /// view for a new sticker is dismissed.
     func commitNewStickerIfNecessary() {
+        // --- FIX: Only commit if the flag is set ---
+        // This prevents the commit logic from running when the user simply
+        // dismisses the detail view of an old sticker from the jar.
+        guard isCommittingNewSticker else {
+            return
+        }
+        
         if commitIsPending || newSticker != nil {
             commitStickerToJar()
             commitIsPending = false
@@ -310,6 +325,9 @@ class HomeViewModel: ObservableObject {
         self.newSticker = nil
         self.stickerToCommit = nil
         self.stickerImageToCommit = nil
+        // --- FIX: Reset the commit flag ---
+        // The commit process is complete, so we reset the flag.
+        self.isCommittingNewSticker = false
     }
     
     /// Submits user-provided feedback via the FeedbackService.
@@ -446,10 +464,10 @@ class HomeViewModel: ObservableObject {
             jarScene.addSticker(foodItem: sticker, image: stickerImageToCommit, isNew: true)
         }
         
-        // Clear the temporary sticker state.
-        self.newSticker = nil
-        self.stickerToCommit = nil
-        self.stickerImageToCommit = nil
+        // --- FIX: Reset state after commit ---
+        // The sticker has been successfully added to the jar. We can now
+        // safely clear all temporary state, including the commit flag.
+        resetTemporaryState()
     }
     
     private func checkForAutoArchive(from source: String) async {
