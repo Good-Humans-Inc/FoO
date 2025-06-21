@@ -41,35 +41,26 @@ struct HomeView: View {
                         )
                         
                         if showFeedbackInput {
-                            // Feedback input UI
-                            HStack(spacing: 12) {
-                                TextField("Confused? Tell me about it...", text: $feedbackText)
-                                    .textFieldStyle(.plain)
-                                    .padding(.horizontal, 16)
-                                    .padding(.vertical, 10)
-                                    .background(.thinMaterial)
-                                    .clipShape(Capsule())
-
-                                Button(action: {
-                                    viewModel.submitFeedback(feedbackText)
-                                    withAnimation {
-                                        showFeedbackInput = false
-                                        feedbackText = ""
-                                    }
-                                }) {
-                                    Image(systemName: "arrow.up.circle.fill")
-                                        .font(.system(size: 28, weight: .bold))
-                                        .foregroundColor(feedbackText.isEmpty ? .gray : .themeAccent)
+                            FeedbackView(feedbackText: $feedbackText) {
+                                viewModel.submitFeedback(feedbackText)
+                                withAnimation {
+                                    showFeedbackInput = false
+                                    feedbackText = ""
                                 }
-                                .disabled(feedbackText.isEmpty)
                             }
-                            .padding(8)
-                            .background(
-                                .ultraThinMaterial,
-                                in: RoundedRectangle(cornerRadius: 30, style: .continuous)
+                            .gesture(
+                                DragGesture()
+                                    .onEnded { value in
+                                        let swipeUp = value.translation.height < -50
+                                        let swipeRight = value.translation.width > 50
+                                        // If user swipes up or right, close the feedback box
+                                        if swipeUp || swipeRight {
+                                            withAnimation {
+                                                showFeedbackInput = false
+                                            }
+                                        }
+                                    }
                             )
-                            .shadow(color: .black.opacity(0.1), radius: 5, x: 0, y: 2)
-                            .transition(.opacity.combined(with: .move(edge: .trailing)))
                         }
                         
                         Spacer()
@@ -101,6 +92,19 @@ struct HomeView: View {
                                     viewModel.clearJarView()
                                 }
                             }
+                    }
+                    .onTapGesture {
+                        if showFeedbackInput {
+                            withAnimation {
+                                showFeedbackInput = false
+                            }
+                        }
+                    }
+                }
+                .onChange(of: showFeedbackInput) { isShowing in
+                    if !isShowing {
+                        // Resign first responder to dismiss the keyboard
+                        UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
                     }
                 }
                 .onChange(of: viewModel.triggerSnapshot) { shouldSnapshot in
@@ -147,13 +151,16 @@ struct HomeView: View {
                         .overlay {
                             VStack {
                                 ProgressView()
-                                Text("( ˘▽˘)っ Jas'ing it up...").font(.title2).foregroundColor(.white)
+                                Text("( ˘▽˘)っ Your jar is full! Jas'ing it up...")
+                                    .font(.title2)
+                                    .foregroundColor(.white)
                             }
                         }
                 }
             }
             .navigationBarHidden(true)
             .frame(maxWidth: .infinity, maxHeight: .infinity)
+            .ignoresSafeArea(.keyboard, edges: .bottom)
         }
         .navigationViewStyle(.stack)
         
@@ -178,6 +185,12 @@ struct HomeView: View {
             Button("OK") { viewModel.stickerCreationError = nil }
         } message: {
             Text(viewModel.stickerCreationError ?? "An unknown error occurred.")
+        }
+        // An alert to show if the archiving process fails.
+        .alert("Failed to Archive Jar", isPresented: .constant(viewModel.jarArchivingError != nil)) {
+            Button("OK") { viewModel.jarArchivingError = nil }
+        } message: {
+            Text(viewModel.jarArchivingError ?? "An unknown error occurred. Please try again.")
         }
     }
 }
