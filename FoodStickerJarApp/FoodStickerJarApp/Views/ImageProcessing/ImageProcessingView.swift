@@ -19,56 +19,76 @@ struct ImageProcessingView: View {
     // The current state of the processing flow.
     @State private var currentState: ProcessingState = .camera
     
+    // A flag to indicate that a sticker has been generated and is ready
+    // to be committed when this view is dismissed.
+    @State private var hasProcessedSticker = false
+    
     // Environment value to programmatically dismiss the sheet.
     @Environment(\.dismiss) var dismiss
 
     var body: some View {
-        // A switch to show the correct view based on the current state.
-        let _ = print("[ImageProcessingView] Current state: \(currentState)")
-        switch currentState {
-        case .camera:
-            CameraView { image in
-                // By removing the resize step here, the user gets to crop the exact
-                // image they saw in the camera preview.
-                currentState = .cropping(image)
+        Group {
+            // A switch to show the correct view based on the current state.
+            let _ = print("[ImageProcessingView] Current state: \(currentState)")
+            switch currentState {
+            case .camera:
+                CameraView { image in
+                    // By removing the resize step here, the user gets to crop the exact
+                    // image they saw in the camera preview.
+                    currentState = .cropping(image)
+                }
+                .ignoresSafeArea()
+                
+            case .cropping(let image):
+                // This view contains the VisionKit subject lifting logic.
+                SubjectLiftContainerView(image: image, onComplete: { finalSticker, isSpecial in
+                    
+                    // Immediately prepare the UI for the animation by creating a
+                    // temporary local FoodItem.
+                    let stickerID = viewModel.prepareForAnimation(isSpecial: isSpecial)
+                    
+                    // Immediately transition to the animation state so the user
+                    // sees the effect without waiting for the network.
+                    currentState = .animating(original: image, sticker: finalSticker)
+                    
+                    // Launch a detached background task to handle the slow work
+                    // of saving the images and data to the network.
+                    Task {
+                        await viewModel.processNewSticker(id: stickerID, originalImage: image, stickerImage: finalSticker)
+                    }
+                    
+                    // Mark that we are ready to commit.
+                    self.hasProcessedSticker = true
+                })
+                .ignoresSafeArea()
+                
+            case .animating(let original, let sticker):
+                let _ = print("[ImageProcessingView] Entering .animating state.")
+                // Show our new sparkle and hero transition view
+                StickerCreationView(originalImage: original, stickerImage: sticker)
+                .environmentObject(viewModel)
+                .ignoresSafeArea()
+                
+            case .finished:
+                // This state is no longer used, but we'll keep it for now.
+                EmptyView()
+                    .onAppear {
+                        // Dismiss the sheet once we enter the finished state.
+                        print("[ImageProcessingView] .finished state appeared. Dismissing sheet.")
+                        dismiss()
+                    }
             }
-            .ignoresSafeArea()
-            
-        case .cropping(let image):
-            // This view contains the VisionKit subject lifting logic.
-            SubjectLiftContainerView(image: image, onComplete: { finalSticker, isSpecial in
-                
-                // Immediately prepare the UI for the animation by creating a
-                // temporary local FoodItem.
-                let stickerID = viewModel.prepareForAnimation(isSpecial: isSpecial)
-                
-                // Immediately transition to the animation state so the user
-                // sees the effect without waiting for the network.
-                currentState = .animating(original: image, sticker: finalSticker)
-                
-                // Launch a detached background task to handle the slow work
-                // of saving the images and data to the network.
-                Task {
-                    await viewModel.processNewSticker(id: stickerID, originalImage: image, stickerImage: finalSticker)
-                }
-            })
-            .ignoresSafeArea()
-            
-        case .animating(let original, let sticker):
-            let _ = print("[ImageProcessingView] Entering .animating state.")
-            // Show our new sparkle and hero transition view
-            StickerCreationView(originalImage: original, stickerImage: sticker)
-            .environmentObject(viewModel)
-            .ignoresSafeArea()
-            
-        case .finished:
-            // This state is no longer used, but we'll keep it for now.
-            EmptyView()
-                .onAppear {
-                    // Dismiss the sheet once we enter the finished state.
-                    print("[ImageProcessingView] .finished state appeared. Dismissing sheet.")
-                    dismiss()
-                }
+        }
+        .onDisappear {
+            // This is the definitive point where the user has dismissed the sheet.
+            // We only commit the sticker if one has actually been processed.
+            if hasProcessedSticker {
+                print("[ImageProcessingView] Disappearing with a processed sticker. Committing.")
+                viewModel.commitNewStickerIfNecessary()
+                viewModel.resetTemporaryState()
+            } else {
+                print("[ImageProcessingView] Disappearing without a processed sticker. No action taken.")
+            }
         }
     }
 }

@@ -85,7 +85,7 @@ struct HomeView: View {
                         Spacer()
                         Button(action: {
                             let stickerCount = viewModel.userProfile?.stickerCount ?? 0
-                            if appState.isSubscribed || stickerCount < 20 {
+                            if appState.isSubscribed || stickerCount < 50 {
                                 showImageProcessingSheet = true
                             } else {
                                 showPaywallCover = true
@@ -124,7 +124,6 @@ struct HomeView: View {
         .sheet(isPresented: $showImageProcessingSheet) {
             ImageProcessingView()
                 .environmentObject(viewModel)
-                .onDisappear(perform: viewModel.commitNewStickerIfNecessary)
         }
         .fullScreenCover(isPresented: $showPaywallCover) {
             PaywallView(isPresented: $showPaywallCover)

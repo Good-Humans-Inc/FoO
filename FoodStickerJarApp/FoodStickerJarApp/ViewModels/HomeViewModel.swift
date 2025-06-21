@@ -306,10 +306,12 @@ class HomeViewModel: ObservableObject {
     /// collection and the physics scene. This is called after the detail
     /// view for a new sticker is dismissed.
     func commitNewStickerIfNecessary() {
+        print("[HomeViewModel] commitNewStickerIfNecessary called. isCommittingNewSticker = \(isCommittingNewSticker)")
         // --- FIX: Only commit if the flag is set ---
         // This prevents the commit logic from running when the user simply
         // dismisses the detail view of an old sticker from the jar.
         guard isCommittingNewSticker else {
+            print("[HomeViewModel] Guard failed: Not in a commit flow. Aborting.")
             return
         }
         
@@ -458,16 +460,11 @@ class HomeViewModel: ObservableObject {
         
         if !foodItems.contains(where: { $0.id == sticker.id }) {
             foodItems.append(sticker)
-            // --- FIX: Use the new addSticker method with the local UIImage ---
-            // Pass the locally-stored UIImage directly to the scene.
-            // This ensures the sticker appears immediately without waiting for network operations.
             jarScene.addSticker(foodItem: sticker, image: stickerImageToCommit, isNew: true)
         }
         
-        // --- FIX: Reset state after commit ---
-        // The sticker has been successfully added to the jar. We can now
-        // safely clear all temporary state, including the commit flag.
-        resetTemporaryState()
+        // DO NOT clean up state here. The calling view is responsible for this
+        // to ensure the commit completes before the state is cleared.
     }
     
     private func checkForAutoArchive(from source: String) async {
