@@ -103,10 +103,6 @@ struct HomeView: View {
         .sheet(isPresented: $showImageProcessingSheet) {
             ImageProcessingView()
                 .environmentObject(viewModel)
-                .onDisappear {
-                    print("[HomeView] ImageProcessingView sheet disappearing. Attempting to commit sticker.")
-                    viewModel.commitNewStickerIfNecessary()
-                }
         }
         .fullScreenCover(isPresented: $showPaywallCover) {
             PaywallView(isPresented: $showPaywallCover)
