@@ -40,7 +40,7 @@ struct IntroCarouselView: View {
             Button(action: handleButtonTap) {
                 Text(currentPageIndex < pages.count - 1 ? "Next" : "Continue")
                     .font(.headline)
-                    .foregroundColor(.white)
+                    .foregroundColor(.textOnAccent)
                     .padding()
                     .frame(maxWidth: .infinity)
                     .background(Color.themeAccent)
@@ -88,11 +88,12 @@ private struct FoundersIntroView: View {
 
             Text(page.headline)
                 .font(.system(size: 28, weight: .bold, design: .serif))
+                .foregroundColor(.textPrimary)
                 .multilineTextAlignment(.center)
 
             Text(page.subheadline)
                 .font(.body)
-                .foregroundColor(.secondary)
+                .foregroundColor(.textSecondary)
                 .multilineTextAlignment(.center)
         }
         .padding(.horizontal, 40)

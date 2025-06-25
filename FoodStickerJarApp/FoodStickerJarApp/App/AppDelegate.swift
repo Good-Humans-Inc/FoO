@@ -41,8 +41,13 @@ class AppDelegate: NSObject, UIApplicationDelegate {
     
     func applicationDidBecomeActive(_ application: UIApplication) {
         // Clear the app icon badge number when the app becomes active.
-        UIApplication.shared.applicationIconBadgeNumber = 0
-        print("-[FCM_DEBUG] App became active. Cleared application badge number.")
+        UNUserNotificationCenter.current().setBadgeCount(0) { error in
+            if let error = error {
+                print("-[FCM_DEBUG] Failed to clear application badge number: \(error.localizedDescription)")
+            } else {
+                print("-[FCM_DEBUG] App became active. Cleared application badge number.")
+            }
+        }
     }
     
     func application(_ application: UIApplication, didReceiveRemoteNotification userInfo: [AnyHashable: Any],

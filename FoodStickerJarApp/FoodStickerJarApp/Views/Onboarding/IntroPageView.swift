@@ -22,11 +22,12 @@ struct IntroPageView: View {
 
             Text(page.headline)
                 .font(.system(size: 28, weight: .bold, design: .serif))
+                .foregroundColor(.textPrimary)
                 .multilineTextAlignment(.center)
 
             Text(page.subheadline)
                 .font(.body)
-                .foregroundColor(.secondary)
+                .foregroundColor(.textSecondary)
                 .multilineTextAlignment(.center)
         }
         .padding(.horizontal, 40)

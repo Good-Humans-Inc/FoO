@@ -22,6 +22,7 @@ class AppStateManager: ObservableObject {
 
     @Published var isOnboardingCompleted: Bool = false
     @Published var isSubscribed: Bool = false
+    @Published var isUserSessionReady = false
     
     private let onboardingCompletedKey = "isOnboardingCompleted"
     
@@ -55,5 +56,11 @@ class AppStateManager: ObservableObject {
 
     func updateSubscriptionStatus(_ isSubscribed: Bool) {
         self.isSubscribed = isSubscribed
+    }
+
+    func setUserSessionReady() {
+        if !isUserSessionReady {
+            isUserSessionReady = true
+        }
     }
 } 

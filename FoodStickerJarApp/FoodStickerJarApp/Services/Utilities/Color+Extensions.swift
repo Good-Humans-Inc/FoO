@@ -1,25 +1,32 @@
 import SwiftUI
+import UIKit
 
 extension Color {
-    // MARK: - Logo Color Palette
-    // Official colors from the Jas logo for future reference:
-    // Warm Cream/Yellow: UIColor(red: 254.0/255.0, green: 248.0/255.0, blue: 208.0/255.0, alpha: 1.0)
-    // Soft Pink: UIColor(red: 245.0/255.0, green: 178.0/255.0, blue: 194.0/255.0, alpha: 1.0)
-    // Mint Green: UIColor(red: 179.0/255.0, green: 222.0/255.0, blue: 219.0/255.0, alpha: 1.0)
-    // Teal: UIColor(red: 141.0/255.0, green: 198.0/255.0, blue: 198.0/255.0, alpha: 1.0)
-    // Off-White: UIColor(red: 254.0/255.0, green: 255.0/255.0, blue: 254.0/255.0, alpha: 1.0)
-    
+    // MARK: - Brand Colors
+    // Define the core brand colors as static UIColor properties.
+    // This makes them reusable for creating dynamic, theme-adaptive colors.
+    private static let jasCream = UIColor(red: 253/255, green: 249/255, blue: 240/255, alpha: 1.0)
+    private static let jasPink = UIColor(red: 245/255, green: 178/255, blue: 194/255, alpha: 1.0)
+    private static let jasDarkYellow = UIColor(red: 0.8, green: 0.6, blue: 0.0, alpha: 1.0)
+
     // MARK: - Theme Colors
+    // These colors are used consistently across the app, regardless of light or dark mode.
     
-    /// The primary brand color using the soft pink from the Jas logo.
-    static let themeAccent = Color(red: 245/255, green: 178/255, blue: 194/255)
+    /// The primary background color of the app.
+    static let themeBackground = Color(jasCream)
     
-    /// Additional logo colors for future use
-    static let logoWarmCream = Color(red: 254/255, green: 248/255, blue: 208/255)
-    static let logoMintGreen = Color(red: 179/255, green: 222/255, blue: 219/255)
-    static let logoTeal = Color(red: 141/255, green: 198/255, blue: 198/255)
-    static let logoOffWhite = Color(red: 254/255, green: 255/255, blue: 254/255)
+    /// The primary accent color of the app.
+    static let themeAccent = Color(jasPink)
+
+    /// The primary text color, for high contrast against the background.
+    static let textPrimary = Color.black
     
-    /// The warm, off-white background color used across the app.
-    static let themeBackground = Color(red: 253/255, green: 249/255, blue: 240/255)
-} 
+    /// The secondary text color, for less prominent text elements.
+    static let textSecondary = Color.gray
+    
+    /// A color for text placed on an accent-colored background.
+    static let textOnAccent = Color.white
+
+    /// A color for special offer text, like savings percentages.
+    static let specialOffer = Color(jasDarkYellow)
+}

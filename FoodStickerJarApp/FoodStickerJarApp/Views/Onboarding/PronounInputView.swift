@@ -17,6 +17,7 @@ struct PronounInputView: View {
                     VStack(spacing: 30) {
                         Text("What are your pronouns?")
                             .font(.system(size: 28, weight: .bold, design: .serif))
+                            .foregroundColor(.textPrimary)
                             .multilineTextAlignment(.center)
                         
                         // Pronoun selection buttons
@@ -24,7 +25,7 @@ struct PronounInputView: View {
                             Button(action: { selectPronoun(option, proxy: proxy) }) {
                                 Text(option)
                                     .font(.headline)
-                                    .foregroundColor(isPronounSelected(option) ? .white : .themeAccent)
+                                    .foregroundColor(isPronounSelected(option) ? .textOnAccent : .themeAccent)
                                     .padding()
                                     .frame(maxWidth: .infinity)
                                     .background(isPronounSelected(option) ? Color.themeAccent : Color.clear)
@@ -55,7 +56,7 @@ struct PronounInputView: View {
                     Button(action: onNext) {
                         Text("Next")
                             .font(.headline)
-                            .foregroundColor(.white)
+                            .foregroundColor(.textOnAccent)
                             .padding()
                             .frame(maxWidth: .infinity)
                             .background(Color.themeAccent)

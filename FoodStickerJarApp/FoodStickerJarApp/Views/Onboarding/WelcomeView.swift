@@ -15,6 +15,7 @@ struct WelcomeView: View {
             
             Text("Welcome to")
                 .font(.system(size: 34, weight: .light, design: .serif))
+                .foregroundColor(.textPrimary)
                 .opacity(titleIsVisible ? 1 : 0)
                 .offset(y: titleIsVisible ? 0 : 20)
             
@@ -29,7 +30,7 @@ struct WelcomeView: View {
             Button(action: onContinue) {
                 Text("Let's Go!")
                     .font(.headline)
-                    .foregroundColor(.white)
+                    .foregroundColor(.textOnAccent)
                     .padding()
                     .frame(maxWidth: .infinity)
                     .background(Color.themeAccent)

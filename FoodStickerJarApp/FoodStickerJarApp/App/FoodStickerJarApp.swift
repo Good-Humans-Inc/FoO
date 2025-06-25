@@ -53,26 +53,30 @@ struct FoodStickerJarApp: App {
                         // This closure is called by the OnboardingView when it's done.
                         appState.completeOnboarding()
                     }
-                } else if authService.user != nil {
+                } else if authService.user != nil && appState.isUserSessionReady {
                     // We now use the container view, ensuring the view model's lifecycle
                     // is correctly managed. We also pass the appState to it.
                     HomeContainerView(authService: authService, navigationRouter: navigationRouter)
                         .environmentObject(appState)
                 } else {
-                    // Show a loading view while Firebase is authenticating the user.
-                    ProgressView()
+                    // Show a loading view while Firebase is authenticating and RevenueCat is syncing.
+                    LaunchLoadingView()
                 }
             }
             .fullScreenCover(item: $navigationRouter.selectedFoodItem) { foodItem in
                 // The router now controls this presentation
                 FoodDetailView(foodItem: .constant(foodItem))
             }
+            .preferredColorScheme(.light)
         }
         .onChange(of: scenePhase) { newPhase in
             if newPhase == .active {
                 // When the app becomes active, clear the badge.
                 UIApplication.shared.applicationIconBadgeNumber = 0
                 print("-[FCM_DEBUG] Scene became active. Cleared application badge number via scenePhase.")
+                
+                // Also refresh subscription status to catch out-of-app purchases.
+                PurchasesManager.shared.refreshStatus()
             }
         }
     }

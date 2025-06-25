@@ -9,6 +9,8 @@ struct PaywallView: View {
     @State private var showAlert = false
     @State private var alertMessage = ""
     @State private var selectedPackage: Package?
+    @State private var showRedeemSheet = false
+    @State private var promoCode: String = ""
 
     private var sortedPackages: [Package] {
         guard let packages = purchasesManager.offerings?.current?.availablePackages else { return [] }
@@ -59,6 +61,22 @@ struct PaywallView: View {
         .alert(isPresented: $showAlert) {
             Alert(title: Text("Error"), message: Text(alertMessage), dismissButton: .default(Text("OK")))
         }
+        .onChange(of: purchasesManager.isSubscribed) { isSubscribed in
+            if isSubscribed {
+                isPresented = false
+            }
+        }
+        .alert("Redeem Offer", isPresented: $showRedeemSheet, actions: {
+            TextField("Enter Code", text: $promoCode)
+                .autocapitalization(.none)
+
+            Button("Cancel", role: .cancel) { }
+            Button("Redeem") {
+                redeemOfferCode()
+            }
+        }, message: {
+            Text("Enter your promotional code below to activate your special offer.")
+        })
     }
     
     private var header: some View {
@@ -71,6 +89,7 @@ struct PaywallView: View {
                 
                 Text("Be NOURISHED\n& INSPIRED")
                     .font(.system(size: 28, weight: .heavy, design: .serif))
+                    .foregroundColor(.textPrimary)
                     .lineSpacing(1)
             }
             .padding(.top, 40) // Increased padding to account for close button
@@ -78,7 +97,7 @@ struct PaywallView: View {
             Text("Join thousands of users building healthy habits.\nYour subscription helps us create more fun & helpful features for you.")
                 .font(.system(size: 15, weight: .regular, design: .default))
                 .multilineTextAlignment(.center)
-                .foregroundColor(.black.opacity(0.7))
+                .foregroundColor(.textSecondary)
                 .padding(.top, 10)
         }
         .padding(.horizontal)
@@ -137,7 +156,7 @@ struct PaywallView: View {
             Button(action: purchaseSelectedPackage) {
                 Text("Join and Start!")
                     .font(.system(size: 22, weight: .bold, design: .default))
-                    .foregroundColor(.white)
+                    .foregroundColor(.textOnAccent)
                     .frame(maxWidth: .infinity)
                     .padding()
                     .background(Color.themeAccent)
@@ -146,10 +165,18 @@ struct PaywallView: View {
             }
             .disabled(selectedPackage == nil)
             
-            Button(action: restorePurchases) {
-                Text("Restore Purchases")
-                    .font(.system(size: 16, weight: .medium, design: .default))
-                    .foregroundColor(.gray)
+            HStack(spacing: 20) {
+                Button(action: { showRedeemSheet = true }) {
+                    Text("Redeem Offer")
+                        .font(.system(size: 16, weight: .medium, design: .default))
+                        .foregroundColor(.textSecondary)
+                }
+
+                Button(action: restorePurchases) {
+                    Text("Restore Purchases")
+                        .font(.system(size: 16, weight: .medium, design: .default))
+                        .foregroundColor(.textSecondary)
+                }
             }
         }
         .padding(.horizontal, 30)
@@ -166,7 +193,7 @@ struct PaywallView: View {
                 }) {
                     Image(systemName: "xmark")
                         .font(.system(size: 16, weight: .bold))
-                        .foregroundColor(.black.opacity(0.6))
+                        .foregroundColor(.textPrimary)
                         .padding(10)
                         .background(Color.white.opacity(0.5))
                         .clipShape(Circle())
@@ -190,6 +217,25 @@ struct PaywallView: View {
         formatter.numberStyle = .percent
         formatter.maximumFractionDigits = 0
         return formatter.string(from: savings as NSDecimalNumber)
+    }
+    
+    private func redeemOfferCode() {
+        let code = promoCode.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !code.isEmpty else {
+            alertMessage = "Please enter a valid code."
+            showAlert = true
+            return
+        }
+
+        // The app's unique identifier from App Store Connect.
+        let appleAppId = "6747237252"
+        guard let url = URL(string: "https://apps.apple.com/redeem?ctx=offercodes&id=\(appleAppId)&code=\(code)") else {
+            alertMessage = "There was an error preparing the redemption link."
+            showAlert = true
+            return
+        }
+
+        UIApplication.shared.open(url)
     }
     
     private func purchaseSelectedPackage() {
@@ -259,12 +305,13 @@ struct ExpandablePackageOptionView: View {
             HStack {
                 Text(package.storeProduct.localizedTitle)
                     .font(.system(size: 20, weight: .bold, design: .serif))
+                    .foregroundColor(.textPrimary)
                 
                 if let tagText = tagTextForPackage() {
                     Text(tagText)
                         .font(.system(size: 12, weight: .bold, design: .default))
                         .padding(.horizontal, 8).padding(.vertical, 4)
-                        .background(Color.white)
+                        .background(Color(UIColor.systemGray6))
                         .foregroundColor(.themeAccent)
                         .cornerRadius(8)
                 }
@@ -273,13 +320,14 @@ struct ExpandablePackageOptionView: View {
             HStack {
                 Text(priceString)
                     .font(.system(size: 22, weight: .bold, design: .serif))
+                    .foregroundColor(.textPrimary)
                 
                 Spacer()
                 
                 if let savings = savings, isBestValue {
                     Text("Save \(savings)")
                         .font(.system(size: 14, weight: .medium, design: .default))
-                        .foregroundColor(.yellow.darker())
+                        .foregroundColor(.specialOffer)
                 }
             }
             
@@ -287,16 +335,16 @@ struct ExpandablePackageOptionView: View {
                 let monthlyPrice = (package.storeProduct.price / 12)
                 Text("(~\(monthlyPrice.formatted(.currency(code: package.storeProduct.currencyCode ?? "USD")))/month)")
                     .font(.system(size: 16, weight: .regular, design: .default))
-                    .foregroundColor(.black.opacity(0.7))
+                    .foregroundColor(.textSecondary)
             } else if package.storeProduct.subscriptionPeriod?.unit == .month {
                 Text("Did you know? It takes just 21 days to build a habit!")
                     .font(.system(size: 14, weight: .regular, design: .default))
-                    .foregroundColor(.black.opacity(0.6))
+                    .foregroundColor(.textSecondary)
                     .padding(.top, 4)
             } else if package.storeProduct.subscriptionPeriod?.unit == .week {
                 Text("Joyful habits begin today!")
                     .font(.system(size: 14, weight: .regular, design: .default))
-                    .foregroundColor(.black.opacity(0.6))
+                    .foregroundColor(.textSecondary)
                     .padding(.top, 4)
             }
         }
@@ -315,13 +363,15 @@ struct ExpandablePackageOptionView: View {
         HStack {
             Text(package.storeProduct.localizedTitle)
                 .font(.system(size: 18, weight: .bold, design: .serif))
+                .foregroundColor(.textPrimary)
             Spacer()
             Text(priceString)
                 .font(.system(size: 18, weight: .regular, design: .serif))
+                .foregroundColor(.textPrimary)
         }
         .padding()
         .background(
-            RoundedRectangle(cornerRadius: 16).fill(Color.white)
+            RoundedRectangle(cornerRadius: 16).fill(Color(UIColor.secondarySystemGroupedBackground))
         )
         .overlay(
             RoundedRectangle(cornerRadius: 16)
@@ -352,23 +402,6 @@ extension RevenueCat.SubscriptionPeriod.Unit {
         case .year: return "year"
         @unknown default: return ""
         }
-    }
-}
-
-extension Color {
-    func darker(by percentage: CGFloat = 30.0) -> Color {
-        return self.adjust(by: -abs(percentage))
-    }
-    
-    func adjust(by percentage: CGFloat) -> Color {
-        var red: CGFloat = 0, green: CGFloat = 0, blue: CGFloat = 0, alpha: CGFloat = 0
-        if UIColor(self).getRed(&red, green: &green, blue: &blue, alpha: &alpha) {
-            return Color(UIColor(red: min(red + percentage/100, 1.0),
-                                   green: min(green + percentage/100, 1.0),
-                                   blue: min(blue + percentage/100, 1.0),
-                                   alpha: alpha))
-        }
-        return self
     }
 }
 

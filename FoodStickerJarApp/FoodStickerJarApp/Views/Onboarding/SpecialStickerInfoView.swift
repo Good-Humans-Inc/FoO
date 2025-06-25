@@ -10,6 +10,7 @@ struct SpecialStickerInfoView: View {
             VStack(spacing: 30) {
                 Text("Discover Rare Stickers!")
                     .font(.system(size: 28, weight: .bold, design: .serif))
+                    .foregroundColor(.textPrimary)
                     .multilineTextAlignment(.center)
 
                 (Text("Every sticker you create has a chance of being ")
@@ -18,7 +19,7 @@ struct SpecialStickerInfoView: View {
                         .foregroundColor(.themeAccent)
                     + Text(". These special stickers have a unique holographic look and unlock a fun story just for you."))
                     .font(.body)
-                    .foregroundColor(.secondary)
+                    .foregroundColor(.textSecondary)
                     .multilineTextAlignment(.center)
                 
                 // Visual comparison of stickers
@@ -30,6 +31,7 @@ struct SpecialStickerInfoView: View {
                             .frame(width: 100, height: 100)
                         Text("Normal")
                             .font(.headline)
+                            .foregroundColor(.textPrimary)
                     }
                     
                     VStack {
@@ -39,12 +41,13 @@ struct SpecialStickerInfoView: View {
                             .frame(width: 100, height: 100)
                         Text("Rare!")
                             .font(.headline)
+                            .foregroundColor(.textPrimary)
                     }
                 }
                 
                 Text("There's a \(Int(AppConfig.specialItemProbability * 100))% chance for each sticker to be rare!")
                     .font(.caption)
-                    .foregroundColor(.secondary)
+                    .foregroundColor(.textSecondary)
             }
             
             Spacer()
@@ -52,7 +55,7 @@ struct SpecialStickerInfoView: View {
             Button(action: onStart) {
                 Text("Let's Start!")
                     .font(.headline)
-                    .foregroundColor(.white)
+                    .foregroundColor(.textOnAccent)
                     .padding()
                     .frame(maxWidth: .infinity)
                     .background(Color.themeAccent)

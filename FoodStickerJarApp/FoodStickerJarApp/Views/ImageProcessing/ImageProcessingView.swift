@@ -120,21 +120,21 @@ private struct SubjectLiftContainerView: View {
                     case .analyzing:
                         Text("Taking a look ( •̀_•́)ノ")
                             .padding()
-                            .background(.black.opacity(0.7))
-                            .foregroundColor(.white)
+                            .background(Color(UIColor.systemGray6))
+                            .foregroundColor(.textPrimary)
                             .cornerRadius(10)
                     case .subjectsFound:
                         Text("Found it! (≧◡≦)♡")
                             .padding()
-                            .background(.black.opacity(0.7))
-                            .foregroundColor(.white)
+                            .background(Color(UIColor.systemGray6))
+                            .foregroundColor(.textPrimary)
                             .cornerRadius(10)
                     case .noSubjectsFound:
                         Text("Hmm... I'm lost ( •́‸•̀) Can you center the food and get a clear, close shot?")
                             .padding()
                             .multilineTextAlignment(.center)
                             .background(Color.red.opacity(0.8))
-                            .foregroundColor(.white)
+                            .foregroundColor(.textOnAccent)
                             .cornerRadius(10)
                     }
                 }

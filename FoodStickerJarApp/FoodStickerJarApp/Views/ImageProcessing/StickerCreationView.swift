@@ -43,7 +43,7 @@ struct StickerCreationView: View {
                     }
             }
 
-            Color.black.ignoresSafeArea()
+            Color.themeBackground.ignoresSafeArea()
                 .opacity(animationState == .detailView ? 0 : 1)
 
             let _ = print("[StickerCreationView] Current animation state: \(animationState)")
@@ -105,7 +105,7 @@ struct StickerCreationView: View {
             } else {
                 // The preparing state (or a fallback).
                 ProgressView()
-                    .tint(.white)
+                    .tint(.textPrimary)
             }
         }
         .onDisappear {

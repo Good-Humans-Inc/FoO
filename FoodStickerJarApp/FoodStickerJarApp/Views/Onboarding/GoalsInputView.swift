@@ -22,18 +22,19 @@ struct GoalsInputView: View {
                 VStack(spacing: 30) {
                     Text("What brings you to Jas?")
                         .font(.system(size: 28, weight: .bold, design: .serif))
+                        .foregroundColor(.textPrimary)
                         .multilineTextAlignment(.center)
                     
                     Text("Select all that apply.")
                         .font(.body)
-                        .foregroundColor(.secondary)
+                        .foregroundColor(.textSecondary)
 
                     // Goal selection buttons
                     ForEach(goalOptions, id: \.self) { option in
                         Button(action: { toggleGoal(option) }) {
                             Text(option)
                                 .font(.headline)
-                                .foregroundColor(goals.contains(option) ? .white : .themeAccent)
+                                .foregroundColor(goals.contains(option) ? .textOnAccent : .themeAccent)
                                 .padding()
                                 .frame(maxWidth: .infinity)
                                 .background(goals.contains(option) ? Color.themeAccent : Color.clear)
@@ -65,7 +66,7 @@ struct GoalsInputView: View {
                 }) {
                     Text("Next")
                         .font(.headline)
-                        .foregroundColor(.white)
+                        .foregroundColor(.textOnAccent)
                         .padding()
                         .frame(maxWidth: .infinity)
                         .background(Color.themeAccent)

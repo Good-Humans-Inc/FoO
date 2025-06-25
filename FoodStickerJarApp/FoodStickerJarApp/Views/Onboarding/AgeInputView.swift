@@ -14,6 +14,7 @@ struct AgeInputView: View {
             VStack(spacing: 30) {
                 Text("How old are you?")
                     .font(.system(size: 28, weight: .bold, design: .serif))
+                    .foregroundColor(.textPrimary)
                     .multilineTextAlignment(.center)
 
                 Picker("Age", selection: $age) {
@@ -30,7 +31,7 @@ struct AgeInputView: View {
             Button(action: onNext) {
                 Text("Next")
                     .font(.headline)
-                    .foregroundColor(.white)
+                    .foregroundColor(.textOnAccent)
                     .padding()
                     .frame(maxWidth: .infinity)
                     .background(Color.themeAccent)
