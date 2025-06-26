@@ -178,12 +178,30 @@ struct PaywallView: View {
                         .foregroundColor(.textSecondary)
                 }
             }
+            
+            links
         }
         .padding(.horizontal, 30)
         .padding(.bottom, 20).padding(.top, 10)
         .background(Color.themeBackground.edgesIgnoringSafeArea(.bottom))
     }
 
+    private var links: some View {
+        HStack(spacing: 20) {
+            if let url = URL(string: "https://www.goodhumans.today/jas-privacy") {
+                Link("Privacy Policy", destination: url)
+                    .font(.system(size: 12, weight: .regular, design: .default))
+                    .foregroundColor(.textSecondary)
+            }
+            
+            if let url = URL(string: "https://www.apple.com/legal/internet-services/itunes/dev/stdeula/") {
+                Link("Terms of Use", destination: url)
+                    .font(.system(size: 12, weight: .regular, design: .default))
+                    .foregroundColor(.textSecondary)
+            }
+        }
+    }
+    
     private var closeButton: some View {
         VStack {
             HStack {
